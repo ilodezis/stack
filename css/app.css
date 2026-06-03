@@ -1070,3 +1070,66 @@ body.edit-mode .card:nth-child(even) {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-2px); }
 }
+
+/* SWITCH TOGGLE STYLES */
+.setting-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.switch-toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.switch-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--border-input);
+  transition: .2s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+}
+
+.switch-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 2px;
+  bottom: 2px;
+  background-color: #fff;
+  transition: .2s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.15);
+}
+
+.switch-toggle input:checked + .switch-slider {
+  background-color: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+.switch-toggle input:checked + .switch-slider:before {
+  transform: translateX(20px);
+}
+
+html.dark .switch-slider:before {
+  background-color: #f8fafc;
+}
+

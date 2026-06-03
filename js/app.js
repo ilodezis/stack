@@ -4,7 +4,10 @@ import Sortable from 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/modular/sor
 let state = {
   blocks: [],
   items: [],
-  lastCompletionDate: ''
+  lastCompletionDate: '',
+  settings: {
+    dailyTrackingEnabled: false
+  }
 };
 
 let editMode = false;
@@ -38,10 +41,13 @@ const DEFAULT_STATE = {
     { id: 'item-15', blockId: 'block-eve', name: 'L-Теанин', dose: '200 мг', cond: '', checked: false },
     // Night
     { id: 'item-16', blockId: 'block-noc', name: 'Магний бисглицинат', dose: '200 мг', cond: '', checked: false },
-    { id: 'item-17', blockId: 'block-noc', name: 'Глицин', dose: '5 г', cond: '', checked: false },
-    { id: 'item-18', blockId: 'block-noc', name: 'Таурин', dose: '2 г', cond: '', checked: false }
+    { id: 'item-17', blockId: 'block-noc', name: 'Глицин', dose: '5 г', checked: false },
+    { id: 'item-18', blockId: 'block-noc', name: 'Таурин', dose: '2 г', checked: false }
   ],
-  lastCompletionDate: ''
+  lastCompletionDate: '',
+  settings: {
+    dailyTrackingEnabled: false
+  }
 };
 
 // Get today's local date string YYYY-MM-DD
@@ -63,6 +69,9 @@ function loadState() {
       // Ensure data compatibility
       if (!state.blocks || !state.items) {
         state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+      }
+      if (!state.settings) {
+        state.settings = { dailyTrackingEnabled: false };
       }
     } catch (e) {
       state = JSON.parse(JSON.stringify(DEFAULT_STATE));
@@ -90,6 +99,7 @@ function saveState() {
 // --- DOM ELEMENTS ---
 const stacksGrid = document.getElementById('stacks-grid');
 const headerDate = document.getElementById('header-date');
+const progressSection = document.querySelector('.progress-section');
 const progressText = document.getElementById('progress-text');
 const progressFill = document.getElementById('progress-fill');
 const themeToggle = document.getElementById('theme-toggle');
@@ -101,6 +111,7 @@ const searchInput = document.getElementById('search-input');
 const searchClearBtn = document.getElementById('search-clear-btn');
 const settingsBtn = document.getElementById('settings-btn');
 const toastEl = document.getElementById('toast');
+const settingDailyTracking = document.getElementById('setting-daily-tracking');
 
 // Modals
 const dialogBlock = document.getElementById('dialog-block');
@@ -135,6 +146,12 @@ function showToast(message, duration = 2000) {
 
 // --- PROGRESS & FAB ---
 function renderProgressBar() {
+  if (!state.settings.dailyTrackingEnabled) {
+    progressSection.style.display = 'none';
+    return;
+  }
+  progressSection.style.display = 'block';
+
   const total = state.items.length;
   const completed = state.items.filter(item => item.checked).length;
   const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
@@ -144,6 +161,10 @@ function renderProgressBar() {
 }
 
 function updateResetFABVisibility() {
+  if (!state.settings.dailyTrackingEnabled) {
+    resetDailyBtn.classList.remove('visible');
+    return;
+  }
   const hasChecked = state.items.some(item => item.checked);
   if (hasChecked && !editMode) {
     resetDailyBtn.classList.add('visible');
@@ -219,7 +240,8 @@ function renderApp() {
     // Add Row Items
     blockItems.forEach(item => {
       const row = document.createElement('div');
-      row.className = `row-item ${item.checked ? 'checked' : ''}`;
+      const isItemChecked = state.settings.dailyTrackingEnabled && item.checked;
+      row.className = `row-item ${isItemChecked ? 'checked' : ''}`;
       row.dataset.id = item.id;
       
       // Perform search filter if active
@@ -232,7 +254,7 @@ function renderApp() {
       
       row.innerHTML = `
         <div class="row-item-left">
-          <div class="custom-checkbox ${item.checked ? 'checked' : ''}" role="checkbox" aria-checked="${item.checked}"></div>
+          <div class="custom-checkbox ${isItemChecked ? 'checked' : ''}" style="display: ${state.settings.dailyTrackingEnabled ? 'flex' : 'none'};" role="checkbox" aria-checked="${isItemChecked}"></div>
           <div class="row-content">
             <span class="row-name">${item.name}</span>
             ${item.cond ? `<span class="row-cond">${item.cond}</span>` : ''}
@@ -253,6 +275,7 @@ function renderApp() {
       const checkbox = row.querySelector('.custom-checkbox');
       checkbox.addEventListener('click', (e) => {
         e.stopPropagation();
+        if (!state.settings.dailyTrackingEnabled) return;
         item.checked = !item.checked;
         saveState();
         
@@ -264,7 +287,7 @@ function renderApp() {
       
       // Row click to toggle checkbox (except in edit mode)
       row.addEventListener('click', () => {
-        if (!editMode) {
+        if (!editMode && state.settings.dailyTrackingEnabled) {
           checkbox.click();
         }
       });
@@ -569,7 +592,15 @@ btnDeleteItem.addEventListener('click', () => {
 
 // --- SETTINGS DIALOG ACTIONS ---
 settingsBtn.addEventListener('click', () => {
+  settingDailyTracking.checked = state.settings.dailyTrackingEnabled;
   dialogSettings.showModal();
+});
+
+settingDailyTracking.addEventListener('change', (e) => {
+  state.settings.dailyTrackingEnabled = e.target.checked;
+  saveState();
+  renderApp();
+  showToast(state.settings.dailyTrackingEnabled ? 'Отметка о приеме включена' : 'Отметка о приеме выключена');
 });
 
 // Reset stack to default state
