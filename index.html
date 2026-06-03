@@ -1,0 +1,89 @@
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:#ECEEF4;padding:10px 8px 12px;-webkit-font-smoothing:antialiased}
+header{text-align:center;margin-bottom:10px}
+h1{font-size:16px;font-weight:700;color:#0f172a;letter-spacing:-0.3px}
+.sub{font-size:9.5px;color:#94a3b8;margin-top:3px;letter-spacing:0.7px;text-transform:uppercase}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;max-width:500px;margin:0 auto}
+.card{background:#fff;border-radius:11px;overflow:hidden;box-shadow:0 1px 6px rgba(15,23,42,0.08)}
+.card.utro{border-left:3px solid #F59E0B}
+.card.den{border-left:3px solid #3B82F6}
+.card.eve{border-left:3px solid #8B5CF6}
+.card.noc{border-left:3px solid #64748B}
+.ch{display:flex;align-items:center;gap:7px;padding:7px 9px 7px 8px;border-bottom:1px solid rgba(0,0,0,0.05)}
+.utro .ch{background:linear-gradient(to right,#FFFBEB,#fff)}
+.den  .ch{background:linear-gradient(to right,#EFF6FF,#fff)}
+.eve  .ch{background:linear-gradient(to right,#F5F3FF,#fff)}
+.noc  .ch{background:linear-gradient(to right,#F1F5F9,#fff)}
+.ico{font-size:14px;flex-shrink:0;line-height:1}
+.ch-label{font-size:10px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;line-height:1}
+.ch-sub{font-size:8.5px;margin-top:2px;color:#94a3b8;line-height:1}
+.utro .ch-label{color:#B45309}
+.den  .ch-label{color:#1D4ED8}
+.eve  .ch-label{color:#7C3AED}
+.noc  .ch-label{color:#334155}
+.rows{padding:1px 0}
+.row{display:flex;align-items:flex-start;justify-content:space-between;padding:5px 9px 5px 8px;gap:5px;min-height:26px}
+.row:nth-child(even){background:#F9FAFB}
+.rinfo{flex:1;min-width:0}
+.rname{font-size:12.5px;font-weight:600;color:#1e293b;line-height:1.25}
+.rcond{font-size:9px;color:#94a3b8;margin-top:1px;line-height:1.2}
+.dose{font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;line-height:1.4;flex-shrink:0;text-align:right;margin-top:1px}
+.utro .dose{background:#FEF3C7;color:#92400E}
+.den  .dose{background:#DBEAFE;color:#1D4ED8}
+.eve  .dose{background:#EDE9FE;color:#6D28D9}
+.noc  .dose{background:#F1F5F9;color:#334155}
+</style>
+
+<h2 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">Стек добавок: утро, день, вечер, ночь</h2>
+
+<header>
+  <h1>Стек добавок</h1>
+  <div class="sub">4 блока · июнь 2026</div>
+</header>
+
+<div class="grid">
+
+  <div class="card utro">
+    <div class="ch"><div class="ico">☀️</div><div><div class="ch-label">Утро</div><div class="ch-sub">натощак</div></div></div>
+    <div class="rows">
+      <div class="row"><div class="rinfo"><div class="rname">B12 метилкобаламин</div></div><span class="dose">1000 мкг</span></div>
+      <div class="row"><div class="rinfo"><div class="rname">Метилфолат 5-MTHF</div></div><span class="dose">400 мкг</span></div>
+      <div class="row"><div class="rinfo"><div class="rname">NAC + Селен</div></div><span class="dose">600 мг</span></div>
+      <div class="row"><div class="rinfo"><div class="rname">Lion's Mane</div></div><span class="dose">500 мг</span></div>
+      <div class="row"><div class="rinfo"><div class="rname">Мака</div></div><span class="dose">500 мг</span></div>
+      <div class="row"><div class="rinfo"><div class="rname">L-Теанин</div><div class="rcond">с кофе</div></div><span class="dose">200 мг</span></div>
+    </div>
+  </div>
+
+  <div class="card den">
+    <div class="ch"><div class="ico">🌤️</div><div><div class="ch-label">День</div><div class="ch-sub">с едой</div></div></div>
+    <div class="rows">
+      <div class="row"><div class="rinfo"><div class="rname">Витамин D3 + K2</div></div><span class="dose">5000МЕ+100мкг</span></div>
+      <div class="row"><div class="rinfo"><div class="rname">Омега-3 EPA+DHA</div></div><span class="dose">2100 мг</span></div>
+      <div class="row"><div class="rinfo"><div class="rname">Бор Albion</div></div><span class="dose">6 мг</span></div>
+      <div class="row"><div class="rinfo"><div class="rname">Цинк пиколинат</div></div><span class="dose">25 мг</span></div>
+      <div class="row"><div class="rinfo"><div class="rname">Витамин C</div></div><span class="dose">500 мг</span></div>
+      <div class="row"><div class="rinfo"><div class="rname">Магний бисглицинат</div></div><span class="dose">200 мг</span></div>
+    </div>
+  </div>
+
+  <div class="card eve">
+    <div class="ch"><div class="ico">🌆</div><div><div class="ch-label">Вечер</div></div></div>
+    <div class="rows">
+      <div class="row"><div class="rinfo"><div class="rname">Псиллиум</div><div class="rcond">за 30 мин до остального</div></div><span class="dose">4 ч.л.</span></div>
+      <div class="row"><div class="rinfo"><div class="rname">Ашваганда KSM-66</div></div><span class="dose">600 мг</span></div>
+      <div class="row"><div class="rinfo"><div class="rname">L-Теанин</div></div><span class="dose">200 мг</span></div>
+    </div>
+  </div>
+
+  <div class="card noc">
+    <div class="ch"><div class="ico">🌙</div><div><div class="ch-label">Ночь</div><div class="ch-sub">за 40–60 мин до сна</div></div></div>
+    <div class="rows">
+      <div class="row"><div class="rinfo"><div class="rname">Магний бисглицинат</div></div><span class="dose">200 мг</span></div>
+      <div class="row"><div class="rinfo"><div class="rname">Глицин</div></div><span class="dose">5 г</span></div>
+      <div class="row"><div class="rinfo"><div class="rname">Таурин</div></div><span class="dose">2 г</span></div>
+    </div>
+  </div>
+
+</div>
