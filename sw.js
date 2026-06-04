@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ritual-v3';
+const CACHE_NAME = 'ritual-v4';
 const ASSETS = [
   './',
   './index.html',
@@ -45,7 +45,7 @@ self.addEventListener('fetch', (e) => {
               cache.put(e.request, networkResponse);
             });
           }
-        }).catch(() => {/* Ignore network errors offline */});
+        }).catch(() => {/* Ignore network errors offline */ });
         return cachedResponse;
       }
       return fetch(e.request);
