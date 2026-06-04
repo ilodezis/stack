@@ -295,6 +295,7 @@ function renderApp() {
           </div>
         </div>
         <div class="card-header-right">
+          <button class="btn-mark-all" data-block-id="${block.id}" title="Отметить все">✓ Все</button>
           <button class="btn-card-action btn-edit-block" title="Редактировать блок" style="display: ${editMode ? 'flex' : 'none'};">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
           </button>
@@ -375,6 +376,23 @@ function renderApp() {
       rowsContainer.appendChild(row);
     });
     
+    // Mark-all button logic
+    const markAllBtn = card.querySelector('.btn-mark-all');
+    const updateMarkAllState = () => {
+      const allDone = blockItems.every(i => i.checked);
+      markAllBtn.classList.toggle('all-done', allDone);
+      markAllBtn.textContent = allDone ? '✓ Готово' : '✓ Все';
+    };
+    updateMarkAllState();
+    markAllBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!state.settings.dailyTrackingEnabled) return;
+      const allDone = blockItems.every(i => i.checked);
+      blockItems.forEach(i => i.checked = !allDone);
+      saveState();
+      renderApp();
+    });
+
     // Edit block event
     card.querySelector('.btn-edit-block').addEventListener('click', (e) => {
       e.stopPropagation();
@@ -393,6 +411,9 @@ function renderApp() {
   renderProgressBar();
   updateResetFABVisibility();
   
+  // Sync daily-tracking-on class for mark-all CSS visibility
+  document.body.classList.toggle('daily-tracking-on', state.settings.dailyTrackingEnabled);
+
   if (editMode) {
     initDragAndDrop();
   }
@@ -939,22 +960,26 @@ function buildSkincareCard(item, timing) {
   card.className = `skincare-card ${timing}`;
   card.dataset.id = item.id;
 
+  // 'daily' means all 7 days
+  const effectiveDays = item.scheduleType === 'daily'
+    ? [0, 1, 2, 3, 4, 5, 6]
+    : (item.scheduleDays || []);
+
   // Determine done state
   let isDoneToday = false;
-  if (item.scheduleType === 'days') {
+  if (item.scheduleType === 'days' || item.scheduleType === 'daily') {
     isDoneToday = !!(item.history && item.history[today]);
   }
   if (isDoneToday) card.classList.add('done-today');
 
+  const dragHandleSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>`;
   const editSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
 
-  // --- Days type bottom section ---
+  // --- Days/Daily type bottom section ---
   let bottomSection = '';
-  if (item.scheduleType === 'days') {
-    const scheduleDays = item.scheduleDays || [];
+  if (item.scheduleType === 'days' || item.scheduleType === 'daily') {
     const bubblesHTML = DAY_LABELS.map((label, i) => {
-      // i is DOW (0=Sun...6=Sat)
-      const isScheduled = scheduleDays.includes(i);
+      const isScheduled = effectiveDays.includes(i);
       const isToday = i === todayDOW;
       const isDone = !!(item.history && item.history[today]) && isToday;
 
@@ -994,8 +1019,9 @@ function buildSkincareCard(item, timing) {
   card.innerHTML = `
     <div class="skincare-card-inner">
       <div class="skincare-card-top">
+        <div class="skincare-drag-handle" aria-label="Перетащить">${dragHandleSVG}</div>
         <div class="skincare-card-name-row">
-          ${item.scheduleType === 'days' ? '<div class="skincare-done-circle"></div>' : ''}
+          ${(item.scheduleType === 'days' || item.scheduleType === 'daily') ? '<div class="skincare-done-circle"></div>' : ''}
           <span class="skincare-card-name">${item.name}</span>
         </div>
         <div class="skincare-card-actions">
@@ -1006,14 +1032,13 @@ function buildSkincareCard(item, timing) {
     </div>
   `;
 
-  // Click card to toggle done (days type only)
-  if (item.scheduleType === 'days') {
+  // Click card to toggle done (days/daily type only)
+  if (item.scheduleType === 'days' || item.scheduleType === 'daily') {
     card.addEventListener('click', (e) => {
-      if (e.target.closest('.btn-edit-skincare')) return;
+      if (e.target.closest('.btn-edit-skincare') || e.target.closest('.skincare-drag-handle')) return;
       if (skincareEditMode) return;
-      const scheduleDays = item.scheduleDays || [];
-      // Only allow toggle on scheduled days
-      if (!scheduleDays.includes(getTodayDOW())) {
+      // For 'daily' all days are valid
+      if (item.scheduleType === 'days' && !effectiveDays.includes(getTodayDOW())) {
         showToast('Это средство не запланировано на сегодня');
         return;
       }
@@ -1057,13 +1082,62 @@ function buildSkincareCard(item, timing) {
 // Skincare edit mode toggle
 const skincareEditToggle = document.getElementById('skincare-edit-toggle');
 const skincareEditBtnText = document.getElementById('skincare-edit-btn-text');
+let skincareSortableMorning = null;
+let skincareSortableEvening = null;
+
 skincareEditToggle.addEventListener('click', () => {
   skincareEditMode = !skincareEditMode;
   document.body.classList.toggle('skincare-edit-mode', skincareEditMode);
   skincareEditToggle.classList.toggle('active', skincareEditMode);
   skincareEditBtnText.textContent = skincareEditMode ? 'Готово' : 'Настроить';
-  showToast(skincareEditMode ? 'Режим настройки активен' : 'Изменения сохранены');
+
+  if (skincareEditMode) {
+    initSkincareDragAndDrop();
+    showToast('Режим настройки активен');
+  } else {
+    if (skincareSortableMorning) { skincareSortableMorning.destroy(); skincareSortableMorning = null; }
+    if (skincareSortableEvening) { skincareSortableEvening.destroy(); skincareSortableEvening = null; }
+    showToast('Изменения сохранены');
+  }
 });
+
+function initSkincareDragAndDrop() {
+  const morningList = document.getElementById('skincare-morning-list');
+  const eveningList = document.getElementById('skincare-evening-list');
+
+  const onSortEnd = () => {
+    // Rebuild skincareItems order from DOM
+    const newOrder = [];
+    [morningList, eveningList].forEach(list => {
+      list.querySelectorAll('.skincare-card').forEach(cardEl => {
+        const id = cardEl.dataset.id;
+        const item = state.skincareItems.find(i => i.id === id);
+        if (item) newOrder.push(item);
+      });
+    });
+    state.skincareItems = newOrder;
+    saveState();
+  };
+
+  if (morningList) {
+    skincareSortableMorning = Sortable.create(morningList, {
+      handle: '.skincare-drag-handle',
+      animation: 180,
+      ghostClass: 'sortable-ghost',
+      chosenClass: 'sortable-chosen',
+      onEnd: onSortEnd
+    });
+  }
+  if (eveningList) {
+    skincareSortableEvening = Sortable.create(eveningList, {
+      handle: '.skincare-drag-handle',
+      animation: 180,
+      ghostClass: 'sortable-ghost',
+      chosenClass: 'sortable-chosen',
+      onEnd: onSortEnd
+    });
+  }
+}
 
 // Add buttons
 document.getElementById('btn-add-skincare-morning').addEventListener('click', () => openSkincareModal(null, 'morning'));
@@ -1079,9 +1153,9 @@ const subfieldFreq = document.getElementById('subfield-frequency');
 // Schedule type radio switching
 document.querySelectorAll('input[name="skincare-schedule"]').forEach(radio => {
   radio.addEventListener('change', () => {
-    const isDays = document.getElementById('schedule-days').checked;
-    subfieldDays.classList.toggle('visible', isDays);
-    subfieldFreq.classList.toggle('visible', !isDays);
+    const val = document.querySelector('input[name="skincare-schedule"]:checked').value;
+    subfieldDays.classList.toggle('visible', val === 'days');
+    subfieldFreq.classList.toggle('visible', val === 'frequency');
   });
 });
 
@@ -1101,6 +1175,8 @@ function openSkincareModal(item = null, defaultTiming = 'morning') {
   document.querySelectorAll('.day-pick-btn').forEach(b => b.classList.remove('selected'));
   subfieldDays.classList.add('visible');
   subfieldFreq.classList.remove('visible');
+  // Default: show days subfield, check 'days' radio
+  document.getElementById('schedule-days').checked = true;
 
   if (item) {
     titleEl.textContent = 'Редактировать средство';
@@ -1117,6 +1193,11 @@ function openSkincareModal(item = null, defaultTiming = 'morning') {
     if (scheduleRadio) scheduleRadio.checked = true;
     subfieldDays.classList.toggle('visible', item.scheduleType === 'days');
     subfieldFreq.classList.toggle('visible', item.scheduleType === 'frequency');
+    // daily: no subfields
+    if (item.scheduleType === 'daily') {
+      subfieldDays.classList.remove('visible');
+      subfieldFreq.classList.remove('visible');
+    }
 
     // Days
     if (item.scheduleType === 'days' && item.scheduleDays) {

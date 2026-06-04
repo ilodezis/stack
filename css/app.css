@@ -1803,7 +1803,62 @@ html.dark .btn-edit-skincare:hover {
 .skincare-empty-title { font-family: var(--font-logo); font-size: 16px; font-weight: 800; color: var(--text-primary); margin-bottom: 6px; }
 .skincare-empty-text { font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; max-width: 280px; }
 
-/* Skincare edit toggle */
+/* Skincare drag handle (in edit mode) */
+.skincare-drag-handle {
+  display: none;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  color: var(--text-secondary);
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+.skincare-drag-handle svg {
+  width: 14px;
+  height: 14px;
+}
+
+body.skincare-edit-mode .skincare-drag-handle {
+  display: flex;
+}
+
+/* Mark-all button on supplement stack cards */
+.btn-mark-all {
+  display: none;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-primary);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+  white-space: nowrap;
+}
+
+.btn-mark-all.all-done {
+  color: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+.btn-mark-all:hover {
+  background-color: var(--accent-color);
+  border-color: var(--accent-color);
+  color: #fff;
+}
+
+body.daily-tracking-on .btn-mark-all {
+  display: flex;
+}
+
 .skincare-controls {
   display: flex;
   align-items: center;
@@ -1852,6 +1907,10 @@ html.dark .btn-edit-skincare:hover {
   margin-top: 6px;
 }
 
+.schedule-type-toggle.three-col {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
 .timing-toggle input[type="radio"],
 .schedule-type-toggle input[type="radio"] {
   display: none;
@@ -1879,6 +1938,14 @@ html.dark .btn-edit-skincare:hover {
 .timing-toggle label:first-of-type,
 .schedule-type-toggle label:first-of-type {
   border-right: 1px solid var(--border-input);
+}
+
+.schedule-type-toggle.three-col label {
+  border-right: 1px solid var(--border-input);
+}
+
+.schedule-type-toggle.three-col label:last-of-type {
+  border-right: none;
 }
 
 .schedule-type-toggle input:checked + label {
