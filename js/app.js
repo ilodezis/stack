@@ -257,8 +257,8 @@ function renderApp() {
     emptyCard.className = 'empty-state-card';
     emptyCard.innerHTML = `
       <div class="empty-state-illustration">🌱</div>
-      <h3 class="empty-state-title">Стек добавок пуст</h3>
-      <p class="empty-state-text">Создайте свой первый блок (например: Утро, День или Вечер), чтобы начать добавлять витамины.</p>
+      <h3 class="empty-state-title">Ритуалы ещё не добавлены</h3>
+      <p class="empty-state-text">Создайте первый блок — например «Утро», «День» или «Вечер» — и добавьте витамины или добавки.</p>
       <button id="btn-create-first-block" class="btn-action btn-primary btn-empty-state">
         Создать первый блок
       </button>
@@ -719,7 +719,7 @@ document.getElementById('btn-export-json').addEventListener('click', () => {
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
   const downloadAnchor = document.createElement('a');
   downloadAnchor.setAttribute("href", dataStr);
-  downloadAnchor.setAttribute("download", `supplement-stack-backup-${getTodayString()}.json`);
+  downloadAnchor.setAttribute("download", `ritual-backup-${getTodayString()}.json`);
   document.body.appendChild(downloadAnchor);
   downloadAnchor.click();
   downloadAnchor.remove();

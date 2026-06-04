@@ -1,4 +1,4 @@
-const CACHE_NAME = 'supplement-tracker-v2';
+const CACHE_NAME = 'ritual-v3';
 const ASSETS = [
   './',
   './index.html',

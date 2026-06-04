@@ -166,9 +166,15 @@ body {
 
 .logo-title {
   font-family: var(--font-logo);
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 800;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.8px;
+  font-style: italic;
+}
+
+.logo-dot {
+  color: var(--accent-color);
+  font-style: normal;
 }
 
 .sub-date {
