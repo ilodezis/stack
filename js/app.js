@@ -237,14 +237,8 @@ resetDailyBtn.addEventListener('click', () => {
 function renderDate() {
   const options = { weekday: 'long', day: 'numeric', month: 'long' };
   const dateStr = new Date().toLocaleDateString('ru-RU', options);
-  const blocksCount = state.blocks.length;
-  
-  // Pluralize blocks label
-  let blocksText = 'блоков';
-  if (blocksCount === 1) blocksText = 'блок';
-  else if (blocksCount >= 2 && blocksCount <= 4) blocksText = 'блока';
-  
-  headerDate.textContent = `${blocksCount} ${blocksText} · ${dateStr}`;
+  const capitalizedDateStr = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+  headerDate.textContent = capitalizedDateStr;
 }
 
 // --- RENDER APPLICATION ---
