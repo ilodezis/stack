@@ -59,6 +59,15 @@ const DEMO_STATE = {
     { id: 'item-17', blockId: 'block-noc', name: 'Глицин', dose: '5 г', checked: false },
     { id: 'item-18', blockId: 'block-noc', name: 'Таурин', dose: '2 г', checked: false }
   ],
+  skincareItems: [
+    { id: 'skin-demo-1', name: 'Очищающий гель CeraVe', timing: 'morning', scheduleType: 'daily', currentWeekCount: 0, history: {} },
+    { id: 'skin-demo-2', name: 'Тоник с салициловой кислотой', timing: 'morning', scheduleType: 'days', scheduleDays: [1, 3, 5], currentWeekCount: 0, history: {} },
+    { id: 'skin-demo-3', name: 'Сыворотка с Витамином C', timing: 'morning', scheduleType: 'daily', currentWeekCount: 0, history: {} },
+    { id: 'skin-demo-4', name: 'Солнцезащитный крем SPF 50', timing: 'morning', scheduleType: 'daily', currentWeekCount: 0, history: {} },
+    { id: 'skin-demo-5', name: 'Гидрофильное масло', timing: 'evening', scheduleType: 'daily', currentWeekCount: 0, history: {} },
+    { id: 'skin-demo-6', name: 'Пилинг с AHA/BHA кислотами', timing: 'evening', scheduleType: 'frequency', targetFrequency: 2, currentWeekCount: 0, history: {} },
+    { id: 'skin-demo-7', name: 'Ночной увлажняющий крем', timing: 'evening', scheduleType: 'daily', currentWeekCount: 0, history: {} }
+  ],
   lastCompletionDate: '',
   settings: {
     dailyTrackingEnabled: false,
@@ -850,7 +859,8 @@ function initOnboardingWizard() {
     saveState();
     dialogOnboarding.close();
     renderApp();
-    showToast('Стек настроен! Добавьте первый блок');
+    renderSkincareScreen();
+    showToast('Настройка завершена! Создайте первый блок');
   };
 
   // Load Demo Button
@@ -862,7 +872,8 @@ function initOnboardingWizard() {
     saveState();
     dialogOnboarding.close();
     renderApp();
-    showToast('Демо-стек успешно загружен!');
+    renderSkincareScreen();
+    showToast('Демо-ритуалы успешно загружены!');
   };
 }
 
