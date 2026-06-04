@@ -6,7 +6,8 @@ let state = {
   items: [],
   lastCompletionDate: '',
   settings: {
-    dailyTrackingEnabled: false
+    dailyTrackingEnabled: false,
+    onboardingCompleted: false
   }
 };
 
@@ -14,6 +15,16 @@ let editMode = false;
 let searchQuery = '';
 
 const DEFAULT_STATE = {
+  blocks: [],
+  items: [],
+  lastCompletionDate: '',
+  settings: {
+    dailyTrackingEnabled: false,
+    onboardingCompleted: false
+  }
+};
+
+const DEMO_STATE = {
   blocks: [
     { id: 'block-utro', name: 'Утро', sub: 'натощак', icon: '☀️', color: 'utro' },
     { id: 'block-den', name: 'День', sub: 'с едой', icon: '🌤️', color: 'den' },
@@ -46,7 +57,8 @@ const DEFAULT_STATE = {
   ],
   lastCompletionDate: '',
   settings: {
-    dailyTrackingEnabled: false
+    dailyTrackingEnabled: false,
+    onboardingCompleted: true
   }
 };
 
@@ -71,7 +83,9 @@ function loadState() {
         state = JSON.parse(JSON.stringify(DEFAULT_STATE));
       }
       if (!state.settings) {
-        state.settings = { dailyTrackingEnabled: false };
+        state.settings = { dailyTrackingEnabled: false, onboardingCompleted: true };
+      } else if (state.settings.onboardingCompleted === undefined) {
+        state.settings.onboardingCompleted = true; // Migrate existing users
       }
     } catch (e) {
       state = JSON.parse(JSON.stringify(DEFAULT_STATE));
@@ -201,7 +215,30 @@ function renderApp() {
   stacksGrid.innerHTML = '';
   renderDate();
   
-  state.blocks.forEach(block => {
+  if (state.blocks.length === 0) {
+    const emptyCard = document.createElement('div');
+    emptyCard.className = 'empty-state-card';
+    emptyCard.innerHTML = `
+      <div class="empty-state-illustration">🌱</div>
+      <h3 class="empty-state-title">Стек добавок пуст</h3>
+      <p class="empty-state-text">Создайте свой первый блок (например: Утро, День или Вечер), чтобы начать добавлять витамины.</p>
+      <button id="btn-create-first-block" class="btn-action btn-primary btn-empty-state">
+        Создать первый блок
+      </button>
+    `;
+    
+    emptyCard.querySelector('#btn-create-first-block').addEventListener('click', () => {
+      if (!editMode) {
+        editModeToggle.click();
+      }
+      openBlockModal(null);
+    });
+    
+    stacksGrid.appendChild(emptyCard);
+    stacksGrid.style.display = 'block';
+  } else {
+    stacksGrid.style.display = '';
+    state.blocks.forEach(block => {
     // Filter items belonging to this block
     const blockItems = state.items.filter(item => item.blockId === block.id);
     
@@ -314,6 +351,7 @@ function renderApp() {
     
     stacksGrid.appendChild(card);
   });
+  } // End of state.blocks.length === 0 else block
   
   renderProgressBar();
   updateResetFABVisibility();
@@ -611,6 +649,7 @@ document.getElementById('btn-reset-default').addEventListener('click', () => {
     saveState();
     renderApp();
     dialogSettings.close();
+    checkOnboarding();
     showToast('Стек сброшен к исходному');
   }
 });
@@ -678,6 +717,8 @@ document.querySelectorAll('.modal-sheet').forEach(modal => {
   
   // Close dialog when click is outside dialog contents (on backdrop)
   modal.addEventListener('click', (e) => {
+    if (modal.id === 'dialog-onboarding') return;
+    
     const dialogDimensions = modal.getBoundingClientRect();
     if (
       e.clientX < dialogDimensions.left ||
@@ -699,7 +740,77 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// --- ONBOARDING WIZARD LOGIC ---
+const dialogOnboarding = document.getElementById('dialog-onboarding');
+
+function checkOnboarding() {
+  if (state.settings && state.settings.onboardingCompleted === false) {
+    initOnboardingWizard();
+    dialogOnboarding.showModal();
+  }
+}
+
+function initOnboardingWizard() {
+  const steps = dialogOnboarding.querySelectorAll('.onboarding-step');
+  let currentStep = 1;
+
+  function showStep(stepNumber) {
+    steps.forEach(step => {
+      const isCurrent = parseInt(step.dataset.step) === stepNumber;
+      step.classList.toggle('active', isCurrent);
+    });
+    currentStep = stepNumber;
+  }
+
+  // Next buttons
+  const nextButtons = dialogOnboarding.querySelectorAll('.btn-next-step');
+  nextButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (currentStep < 3) {
+        showStep(currentStep + 1);
+      }
+    });
+  });
+
+  // Prevent escape key close
+  dialogOnboarding.addEventListener('cancel', (e) => {
+    e.preventDefault();
+  });
+
+  // Daily Tracking Checkbox
+  const onboardingDailyTracking = document.getElementById('onboarding-daily-tracking');
+  onboardingDailyTracking.checked = state.settings.dailyTrackingEnabled;
+  onboardingDailyTracking.addEventListener('change', (e) => {
+    state.settings.dailyTrackingEnabled = e.target.checked;
+    settingDailyTracking.checked = e.target.checked;
+    saveState();
+  });
+
+  // Clean Slate Button
+  const btnClean = document.getElementById('btn-onboarding-clean');
+  btnClean.onclick = () => {
+    state.settings.onboardingCompleted = true;
+    saveState();
+    dialogOnboarding.close();
+    renderApp();
+    showToast('Стек настроен! Добавьте первый блок');
+  };
+
+  // Load Demo Button
+  const btnDemo = document.getElementById('btn-onboarding-demo');
+  btnDemo.onclick = () => {
+    state = JSON.parse(JSON.stringify(DEMO_STATE));
+    state.settings.dailyTrackingEnabled = onboardingDailyTracking.checked;
+    state.lastCompletionDate = getTodayString();
+    saveState();
+    dialogOnboarding.close();
+    renderApp();
+    showToast('Демо-стек успешно загружен!');
+  };
+}
+
 // --- INITIALIZE APP ---
 initTheme();
 loadState();
+checkOnboarding();
 renderApp();
