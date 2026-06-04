@@ -1,10 +1,10 @@
 # ✨ Ritual
 
-[🇷🇺 Читать на русском](#-русский) | [🇬🇧 Read in English](#-english)
+[Русский](#русский) | [English](#english)
 
 ---
 
-## 🇷🇺 Русский
+## Русский
 
 **Ritual** — красивое, быстрое и полностью приватное веб-приложение для отслеживания ежедневных ритуалов: витаминов, добавок и уходовых средств.
 
@@ -94,7 +94,7 @@ ritual/
 
 ---
 
-## 🇬🇧 English
+## English
 
 **Ritual** is a beautiful, fast, and fully private web application for tracking your daily rituals: vitamins, supplements, and skincare routines.
 
@@ -136,7 +136,7 @@ Designed as a **Progressive Web App (PWA)** — it installs on your smartphone's
 ### 📱 How to Install on Your Phone
 
 1. Open the app link in your smartphone's browser
-2. **iOS (Safari)**: Tap "Share" → "Add to Screen"
+2. **iOS (Safari)**: Tap "Share" → "Add to Home Screen"
 3. **Android (Chrome)**: Tap menu `⋮` → "Install app" or "Add to home screen"
 
 The **Ritual** icon will appear on your home screen, and the app will open in fullscreen mode without any browser interface.
