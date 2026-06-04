@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#0f172a">
   
   <title>Стек добавок — Трекер</title>
-  <meta name="description" content="Персональное веб-приложение для удобного трекинга приема добавок и витаминов на мобильном телефоне">
+  <meta name="description" content="Персональный трекер добавок и уходовых средств. Отслеживайте витамины и косметику, всё в одном приложении.">
   
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -54,35 +54,92 @@
   </header>
   
   <main class="app-content">
-    <div class="search-and-controls">
-      <div class="search-box">
-        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        <input type="text" id="search-input" placeholder="Поиск добавок..." aria-label="Поиск добавок">
-        <button id="search-clear-btn" class="search-clear" aria-label="Очистить поиск" style="display: none;">&times;</button>
+
+    <!-- ===== SCREEN: SUPPLEMENTS ===== -->
+    <div id="screen-supplements" class="screen active">
+      <div class="search-and-controls">
+        <div class="search-box">
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" id="search-input" placeholder="Поиск добавок..." aria-label="Поиск добавок">
+          <button id="search-clear-btn" class="search-clear" aria-label="Очистить поиск" style="display: none;">&times;</button>
+        </div>
+        <button id="edit-mode-toggle" class="btn-toggle-edit" title="Режим редактирования">
+          <span class="btn-text">Настроить</span>
+          <svg class="edit-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        </button>
       </div>
-      <button id="edit-mode-toggle" class="btn-toggle-edit" title="Режим редактирования">
-        <span class="btn-text">Настроить</span>
-        <svg class="edit-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-      </button>
+
+      <!-- Stacks Grid -->
+      <div id="stacks-grid" class="grid">
+        <!-- Stacks dynamically rendered here -->
+      </div>
+
+      <!-- Add Block Card (Visible only in edit mode) -->
+      <div id="add-block-container" class="add-block-wrapper" style="display: none;">
+        <button id="add-block-btn" class="btn-add-block">
+          <span class="plus-icon">+</span> Добавить новый блок
+        </button>
+      </div>
     </div>
-    
-    <!-- Stacks Grid -->
-    <div id="stacks-grid" class="grid">
-      <!-- Stacks dynamically rendered here -->
+
+    <!-- ===== SCREEN: SKINCARE ===== -->
+    <div id="screen-skincare" class="screen">
+      <div class="skincare-controls">
+        <button id="skincare-edit-toggle" class="btn-toggle-skincare-edit" title="Режим редактирования">
+          <span id="skincare-edit-btn-text">Настроить</span>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        </button>
+      </div>
+
+      <!-- Morning Section -->
+      <div class="skincare-section morning">
+        <div class="skincare-section-header">
+          <span class="skincare-section-icon">☀️</span>
+          <span class="skincare-section-title">Утро</span>
+          <span id="skincare-morning-count" class="skincare-section-count"></span>
+        </div>
+        <div id="skincare-morning-list">
+          <!-- Morning cards rendered here -->
+        </div>
+        <button class="btn-add-skincare" data-timing="morning" id="btn-add-skincare-morning">
+          + Добавить утреннее средство
+        </button>
+      </div>
+
+      <!-- Evening Section -->
+      <div class="skincare-section evening">
+        <div class="skincare-section-header">
+          <span class="skincare-section-icon">🌙</span>
+          <span class="skincare-section-title">Вечер</span>
+          <span id="skincare-evening-count" class="skincare-section-count"></span>
+        </div>
+        <div id="skincare-evening-list">
+          <!-- Evening cards rendered here -->
+        </div>
+        <button class="btn-add-skincare" data-timing="evening" id="btn-add-skincare-evening">
+          + Добавить вечернее средство
+        </button>
+      </div>
     </div>
-    
-    <!-- Add Block Card (Visible only in edit mode) -->
-    <div id="add-block-container" class="add-block-wrapper" style="display: none;">
-      <button id="add-block-btn" class="btn-add-block">
-        <span class="plus-icon">+</span> Добавить новый блок
-      </button>
-    </div>
+
   </main>
   
   <!-- Reset completion FAB when taken any items -->
   <button id="reset-daily-btn" class="btn-fab-reset" aria-label="Сбросить прогресс приема" title="Сбросить сегодняшний прогресс">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
   </button>
+
+  <!-- BOTTOM NAVIGATION -->
+  <nav class="bottom-nav" role="navigation" aria-label="Основная навигация">
+    <button class="nav-tab active" id="nav-supplements" aria-label="Добавки">
+      <span class="nav-emoji">💊</span>
+      <span>Добавки</span>
+    </button>
+    <button class="nav-tab" id="nav-skincare" aria-label="Уход">
+      <span class="nav-emoji">✨</span>
+      <span>Уход</span>
+    </button>
+  </nav>
   
   <!-- DIALOG: Edit/Add Block -->
   <dialog id="dialog-block" class="modal-sheet">
@@ -310,6 +367,71 @@
         </div>
       </div>
     </div>
+  </dialog>
+
+  <!-- DIALOG: Add/Edit Skincare Item -->
+  <dialog id="dialog-skincare" class="modal-sheet">
+    <form method="dialog" id="form-skincare">
+      <div class="modal-header">
+        <h2 id="skincare-dialog-title" class="modal-title">Добавить средство</h2>
+        <button type="button" class="btn-close-modal" aria-label="Закрыть">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit-skincare-id">
+
+        <div class="form-group">
+          <label for="skincare-name">Название средства *</label>
+          <input type="text" id="skincare-name" required placeholder="Например: Ретинол, SPF 50, Тонер">
+        </div>
+
+        <div class="form-group">
+          <label>Тайминг</label>
+          <div class="timing-toggle">
+            <input type="radio" name="skincare-timing" id="timing-morning" value="morning" checked>
+            <label for="timing-morning">☀️ Утро</label>
+            <input type="radio" name="skincare-timing" id="timing-evening" value="evening">
+            <label for="timing-evening">🌙 Вечер</label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Расписание</label>
+          <div class="schedule-type-toggle">
+            <input type="radio" name="skincare-schedule" id="schedule-days" value="days" checked>
+            <label for="schedule-days">По дням</label>
+            <input type="radio" name="skincare-schedule" id="schedule-frequency" value="frequency">
+            <label for="schedule-frequency">Раз в неделю</label>
+          </div>
+        </div>
+
+        <!-- Sub-field: days picker -->
+        <div class="form-group schedule-subfield visible" id="subfield-days">
+          <label>Дни недели</label>
+          <div class="days-picker">
+            <button type="button" class="day-pick-btn" data-day="1">Пн</button>
+            <button type="button" class="day-pick-btn" data-day="2">Вт</button>
+            <button type="button" class="day-pick-btn" data-day="3">Ср</button>
+            <button type="button" class="day-pick-btn" data-day="4">Чт</button>
+            <button type="button" class="day-pick-btn" data-day="5">Пт</button>
+            <button type="button" class="day-pick-btn" data-day="6">Сб</button>
+            <button type="button" class="day-pick-btn" data-day="0">Вс</button>
+          </div>
+        </div>
+
+        <!-- Sub-field: frequency number -->
+        <div class="form-group schedule-subfield" id="subfield-frequency">
+          <label for="skincare-freq-num">Количество раз в неделю</label>
+          <input type="number" id="skincare-freq-num" min="1" max="7" value="3" placeholder="Например: 3">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="btn-delete-skincare" class="btn-action btn-danger" style="display: none;">Удалить</button>
+        <div class="footer-actions">
+          <button type="button" class="btn-action btn-secondary btn-cancel">Отмена</button>
+          <button type="submit" class="btn-action btn-primary">Сохранить</button>
+        </div>
+      </div>
+    </form>
   </dialog>
 
   <!-- Notification Toast -->

@@ -4,7 +4,9 @@ import Sortable from 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/modular/sor
 let state = {
   blocks: [],
   items: [],
+  skincareItems: [],
   lastCompletionDate: '',
+  lastWeekNumber: 0,
   settings: {
     dailyTrackingEnabled: false,
     onboardingCompleted: false
@@ -17,7 +19,9 @@ let searchQuery = '';
 const DEFAULT_STATE = {
   blocks: [],
   items: [],
+  skincareItems: [],
   lastCompletionDate: '',
+  lastWeekNumber: 0,
   settings: {
     dailyTrackingEnabled: false,
     onboardingCompleted: false
@@ -71,6 +75,20 @@ function getTodayString() {
   return `${year}-${month}-${day}`;
 }
 
+// Get ISO week number for a Date
+function getISOWeek(date) {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  d.setHours(0, 0, 0, 0);
+  // Thursday of current week
+  d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+  const week1 = new Date(d.getFullYear(), 0, 4);
+  return 1 + Math.round(((d - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+}
+
+function getCurrentWeekNumber() {
+  return getISOWeek(new Date());
+}
+
 // Load state from local storage or set defaults
 function loadState() {
   const localData = localStorage.getItem('supplement_tracker_state');
@@ -87,6 +105,13 @@ function loadState() {
       } else if (state.settings.onboardingCompleted === undefined) {
         state.settings.onboardingCompleted = true; // Migrate existing users
       }
+      // Migrate: add skincareItems if missing
+      if (!state.skincareItems) {
+        state.skincareItems = [];
+      }
+      if (state.lastWeekNumber === undefined) {
+        state.lastWeekNumber = getCurrentWeekNumber();
+      }
     } catch (e) {
       state = JSON.parse(JSON.stringify(DEFAULT_STATE));
     }
@@ -99,6 +124,18 @@ function loadState() {
   if (state.lastCompletionDate !== today) {
     state.items.forEach(item => item.checked = false);
     state.lastCompletionDate = today;
+    saveState();
+  }
+
+  // Weekly reset for skincare counters
+  const currentWeek = getCurrentWeekNumber();
+  if (state.lastWeekNumber !== currentWeek) {
+    state.skincareItems.forEach(item => {
+      item.currentWeekCount = 0;
+      // For 'days' type — we keep history but mark this week as fresh
+      // (history is date-keyed, so no deletion needed)
+    });
+    state.lastWeekNumber = currentWeek;
     saveState();
   }
 }
@@ -646,8 +683,10 @@ document.getElementById('btn-reset-default').addEventListener('click', () => {
   if (confirm('Вы уверены, что хотите сбросить все ваши настройки к начальным? Все текущие данные будут удалены.')) {
     state = JSON.parse(JSON.stringify(DEFAULT_STATE));
     state.lastCompletionDate = getTodayString();
+    state.lastWeekNumber = getCurrentWeekNumber();
     saveState();
     renderApp();
+    renderSkincareScreen();
     dialogSettings.close();
     checkOnboarding();
     showToast('Стек сброшен к исходному');
@@ -686,8 +725,11 @@ importFileInput.addEventListener('change', (e) => {
         state = importedData;
         // Keep date alignment or force current
         state.lastCompletionDate = state.lastCompletionDate || getTodayString();
+        if (!state.skincareItems) state.skincareItems = [];
+        if (state.lastWeekNumber === undefined) state.lastWeekNumber = getCurrentWeekNumber();
         saveState();
         renderApp();
+        renderSkincareScreen();
         dialogSettings.close();
         showToast('Импорт успешно завершен!');
       } else {
@@ -814,3 +856,349 @@ initTheme();
 loadState();
 checkOnboarding();
 renderApp();
+renderSkincareScreen();
+initBottomNav();
+
+// ================================================================
+// BOTTOM NAV
+// ================================================================
+function initBottomNav() {
+  const navSupplements = document.getElementById('nav-supplements');
+  const navSkincare = document.getElementById('nav-skincare');
+  const screenSupplements = document.getElementById('screen-supplements');
+  const screenSkincare = document.getElementById('screen-skincare');
+
+  navSupplements.addEventListener('click', () => {
+    navSupplements.classList.add('active');
+    navSkincare.classList.remove('active');
+    screenSupplements.classList.add('active');
+    screenSkincare.classList.remove('active');
+  });
+
+  navSkincare.addEventListener('click', () => {
+    navSkincare.classList.add('active');
+    navSupplements.classList.remove('active');
+    screenSkincare.classList.add('active');
+    screenSupplements.classList.remove('active');
+    renderSkincareScreen();
+  });
+}
+
+// ================================================================
+// SKINCARE MODULE
+// ================================================================
+
+const DAY_LABELS = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+let skincareEditMode = false;
+
+// Get current day-of-week (0=Sun, 1=Mon, ..., 6=Sat)
+function getTodayDOW() {
+  return new Date().getDay();
+}
+
+// Render the skincare screen
+function renderSkincareScreen() {
+  const morningList = document.getElementById('skincare-morning-list');
+  const eveningList = document.getElementById('skincare-evening-list');
+  const morningCount = document.getElementById('skincare-morning-count');
+  const eveningCount = document.getElementById('skincare-evening-count');
+
+  morningList.innerHTML = '';
+  eveningList.innerHTML = '';
+
+  const morningItems = state.skincareItems.filter(i => i.timing === 'morning');
+  const eveningItems = state.skincareItems.filter(i => i.timing === 'evening');
+
+  morningCount.textContent = morningItems.length > 0 ? `${morningItems.length} средств` : '';
+  eveningCount.textContent = eveningItems.length > 0 ? `${eveningItems.length} средств` : '';
+
+  // Empty state
+  if (state.skincareItems.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'skincare-empty';
+    empty.innerHTML = `
+      <div class="skincare-empty-icon">🧴</div>
+      <div class="skincare-empty-title">Уходовые средства</div>
+      <p class="skincare-empty-text">Добавьте первое средство, нажав «Настроить» и кнопку «+» в нужном разделе.</p>
+    `;
+    morningList.appendChild(empty);
+    return;
+  }
+
+  [morningItems, eveningItems].forEach((items, idx) => {
+    const container = idx === 0 ? morningList : eveningList;
+    const timing = idx === 0 ? 'morning' : 'evening';
+    items.forEach(item => container.appendChild(buildSkincareCard(item, timing)));
+  });
+}
+
+function buildSkincareCard(item, timing) {
+  const today = getTodayString();
+  const todayDOW = getTodayDOW();
+  const card = document.createElement('div');
+  card.className = `skincare-card ${timing}`;
+  card.dataset.id = item.id;
+
+  // Determine done state
+  let isDoneToday = false;
+  if (item.scheduleType === 'days') {
+    isDoneToday = !!(item.history && item.history[today]);
+  }
+  if (isDoneToday) card.classList.add('done-today');
+
+  const editSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
+
+  // --- Days type bottom section ---
+  let bottomSection = '';
+  if (item.scheduleType === 'days') {
+    const scheduleDays = item.scheduleDays || [];
+    const bubblesHTML = DAY_LABELS.map((label, i) => {
+      // i is DOW (0=Sun...6=Sat)
+      const isScheduled = scheduleDays.includes(i);
+      const isToday = i === todayDOW;
+      const isDone = !!(item.history && item.history[today]) && isToday;
+
+      let cls = '';
+      if (!isScheduled) {
+        cls = 'off';
+      } else if (isToday && isDone) {
+        cls = 'today done';
+      } else if (isToday) {
+        cls = 'today';
+      } else {
+        cls = 'scheduled';
+      }
+      return `<div class="day-bubble ${cls}">${label}</div>`;
+    }).join('');
+    bottomSection = `<div class="skincare-days-row">${bubblesHTML}</div>`;
+  } else {
+    // Frequency type
+    const done = item.currentWeekCount || 0;
+    const target = item.targetFrequency || 3;
+    const pct = Math.min(100, Math.round((done / target) * 100));
+    bottomSection = `
+      <div class="skincare-freq-row">
+        <span class="skincare-freq-text">На этой неделе</span>
+        <span class="skincare-freq-count">${done} / ${target}</span>
+        <div class="skincare-progress-bar">
+          <div class="skincare-progress-fill" style="width: ${pct}%"></div>
+        </div>
+        <div class="skincare-freq-controls">
+          <button class="btn-freq minus" data-id="${item.id}" aria-label="Уменьшить">−</button>
+          <button class="btn-freq plus" data-id="${item.id}" aria-label="Добавить">+</button>
+        </div>
+      </div>
+    `;
+  }
+
+  card.innerHTML = `
+    <div class="skincare-card-inner">
+      <div class="skincare-card-top">
+        <div class="skincare-card-name-row">
+          ${item.scheduleType === 'days' ? '<div class="skincare-done-circle"></div>' : ''}
+          <span class="skincare-card-name">${item.name}</span>
+        </div>
+        <div class="skincare-card-actions">
+          <button class="btn-edit-skincare" data-id="${item.id}" aria-label="Редактировать">${editSVG}</button>
+        </div>
+      </div>
+      ${bottomSection}
+    </div>
+  `;
+
+  // Click card to toggle done (days type only)
+  if (item.scheduleType === 'days') {
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('.btn-edit-skincare')) return;
+      if (skincareEditMode) return;
+      const scheduleDays = item.scheduleDays || [];
+      // Only allow toggle on scheduled days
+      if (!scheduleDays.includes(getTodayDOW())) {
+        showToast('Это средство не запланировано на сегодня');
+        return;
+      }
+      if (!item.history) item.history = {};
+      const today = getTodayString();
+      item.history[today] = !item.history[today];
+      item.currentWeekCount = Object.values(item.history).filter(v => v).length;
+      saveState();
+      renderSkincareScreen();
+    });
+  }
+
+  // Edit button
+  const editBtn = card.querySelector('.btn-edit-skincare');
+  editBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openSkincareModal(item);
+  });
+
+  // Frequency +/- buttons
+  if (item.scheduleType === 'frequency') {
+    const plusBtn = card.querySelector('.btn-freq.plus');
+    const minusBtn = card.querySelector('.btn-freq.minus');
+    plusBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      item.currentWeekCount = (item.currentWeekCount || 0) + 1;
+      saveState();
+      renderSkincareScreen();
+    });
+    minusBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      item.currentWeekCount = Math.max(0, (item.currentWeekCount || 0) - 1);
+      saveState();
+      renderSkincareScreen();
+    });
+  }
+
+  return card;
+}
+
+// Skincare edit mode toggle
+const skincareEditToggle = document.getElementById('skincare-edit-toggle');
+const skincareEditBtnText = document.getElementById('skincare-edit-btn-text');
+skincareEditToggle.addEventListener('click', () => {
+  skincareEditMode = !skincareEditMode;
+  document.body.classList.toggle('skincare-edit-mode', skincareEditMode);
+  skincareEditToggle.classList.toggle('active', skincareEditMode);
+  skincareEditBtnText.textContent = skincareEditMode ? 'Готово' : 'Настроить';
+  showToast(skincareEditMode ? 'Режим настройки активен' : 'Изменения сохранены');
+});
+
+// Add buttons
+document.getElementById('btn-add-skincare-morning').addEventListener('click', () => openSkincareModal(null, 'morning'));
+document.getElementById('btn-add-skincare-evening').addEventListener('click', () => openSkincareModal(null, 'evening'));
+
+// --- SKINCARE MODAL LOGIC ---
+const dialogSkincare = document.getElementById('dialog-skincare');
+const formSkincare = document.getElementById('form-skincare');
+const btnDeleteSkincare = document.getElementById('btn-delete-skincare');
+const subfieldDays = document.getElementById('subfield-days');
+const subfieldFreq = document.getElementById('subfield-frequency');
+
+// Schedule type radio switching
+document.querySelectorAll('input[name="skincare-schedule"]').forEach(radio => {
+  radio.addEventListener('change', () => {
+    const isDays = document.getElementById('schedule-days').checked;
+    subfieldDays.classList.toggle('visible', isDays);
+    subfieldFreq.classList.toggle('visible', !isDays);
+  });
+});
+
+// Day picker toggle buttons
+document.querySelectorAll('.day-pick-btn').forEach(btn => {
+  btn.addEventListener('click', () => btn.classList.toggle('selected'));
+});
+
+function openSkincareModal(item = null, defaultTiming = 'morning') {
+  const titleEl = document.getElementById('skincare-dialog-title');
+  const nameInput = document.getElementById('skincare-name');
+  const idInput = document.getElementById('edit-skincare-id');
+  const freqInput = document.getElementById('skincare-freq-num');
+
+  // Reset form
+  formSkincare.reset();
+  document.querySelectorAll('.day-pick-btn').forEach(b => b.classList.remove('selected'));
+  subfieldDays.classList.add('visible');
+  subfieldFreq.classList.remove('visible');
+
+  if (item) {
+    titleEl.textContent = 'Редактировать средство';
+    idInput.value = item.id;
+    nameInput.value = item.name;
+    btnDeleteSkincare.style.display = 'block';
+
+    // Timing
+    const timingRadio = document.querySelector(`input[name="skincare-timing"][value="${item.timing}"]`);
+    if (timingRadio) timingRadio.checked = true;
+
+    // Schedule type
+    const scheduleRadio = document.querySelector(`input[name="skincare-schedule"][value="${item.scheduleType}"]`);
+    if (scheduleRadio) scheduleRadio.checked = true;
+    subfieldDays.classList.toggle('visible', item.scheduleType === 'days');
+    subfieldFreq.classList.toggle('visible', item.scheduleType === 'frequency');
+
+    // Days
+    if (item.scheduleType === 'days' && item.scheduleDays) {
+      document.querySelectorAll('.day-pick-btn').forEach(btn => {
+        if (item.scheduleDays.includes(Number(btn.dataset.day))) {
+          btn.classList.add('selected');
+        }
+      });
+    }
+
+    // Frequency
+    if (item.scheduleType === 'frequency') {
+      freqInput.value = item.targetFrequency || 3;
+    }
+  } else {
+    titleEl.textContent = 'Добавить средство';
+    idInput.value = '';
+    btnDeleteSkincare.style.display = 'none';
+
+    // Set default timing
+    const timingRadio = document.querySelector(`input[name="skincare-timing"][value="${defaultTiming}"]`);
+    if (timingRadio) timingRadio.checked = true;
+  }
+
+  dialogSkincare.showModal();
+}
+
+formSkincare.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const id = document.getElementById('edit-skincare-id').value;
+  const name = document.getElementById('skincare-name').value.trim();
+  const timing = document.querySelector('input[name="skincare-timing"]:checked').value;
+  const scheduleType = document.querySelector('input[name="skincare-schedule"]:checked').value;
+
+  const scheduleDays = [];
+  if (scheduleType === 'days') {
+    document.querySelectorAll('.day-pick-btn.selected').forEach(btn => {
+      scheduleDays.push(Number(btn.dataset.day));
+    });
+  }
+
+  const targetFrequency = parseInt(document.getElementById('skincare-freq-num').value) || 3;
+
+  if (id) {
+    // Update existing
+    const item = state.skincareItems.find(i => i.id === id);
+    if (item) {
+      item.name = name;
+      item.timing = timing;
+      item.scheduleType = scheduleType;
+      item.scheduleDays = scheduleType === 'days' ? scheduleDays : undefined;
+      item.targetFrequency = scheduleType === 'frequency' ? targetFrequency : undefined;
+    }
+  } else {
+    // Create new
+    const newId = `skin-${Date.now()}`;
+    state.skincareItems.push({
+      id: newId,
+      name,
+      timing,
+      scheduleType,
+      scheduleDays: scheduleType === 'days' ? scheduleDays : undefined,
+      targetFrequency: scheduleType === 'frequency' ? targetFrequency : undefined,
+      currentWeekCount: 0,
+      history: {}
+    });
+  }
+
+  saveState();
+  renderSkincareScreen();
+  dialogSkincare.close();
+  showToast('Средство сохранено');
+});
+
+btnDeleteSkincare.addEventListener('click', () => {
+  const id = document.getElementById('edit-skincare-id').value;
+  if (!id) return;
+  if (confirm('Удалить это средство из списка?')) {
+    state.skincareItems = state.skincareItems.filter(i => i.id !== id);
+    saveState();
+    renderSkincareScreen();
+    dialogSkincare.close();
+    showToast('Средство удалено');
+  }
+});
