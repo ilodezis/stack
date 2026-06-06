@@ -1,90 +1,107 @@
 # ✨ Ritual
 
-[Русский](#русский) | [English](#english)
+<p align="center">
+  <img src="icon.png" alt="Ritual Logo" width="128" height="128" />
+</p>
+
+<h3 align="center">Ritual</h3>
+
+<p align="center">
+  A beautiful, private, and offline-first tracker for your daily health and self-care routines.
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/vanilla-JS-f7df1e.svg?style=flat-square&logo=javascript&logoColor=black" alt="Vanilla JS" />
+  <img src="https://img.shields.io/badge/PWA-supported-00c0f0.svg?style=flat-square&logo=progressive-web-apps&logoColor=white" alt="PWA" />
+  <img src="https://img.shields.io/badge/Offline--First-enabled-4caf50.svg?style=flat-square" alt="Offline-First" />
+  <img src="https://img.shields.io/badge/License-MIT-green.svg?style=flat-square" alt="License" />
+  <img src="https://img.shields.io/badge/Build-not--required-orange.svg?style=flat-square" alt="No Build Required" />
+</p>
 
 ---
 
-## Русский
+## 🌐 Languages / Языки
 
-**Ritual** — красивое, быстрое и полностью приватное веб-приложение для отслеживания ежедневных ритуалов: витаминов, добавок и уходовых средств.
+- [Русский](#-русский)
+- [English](#-english)
 
-Спроектировано как **Progressive Web App (PWA)** — устанавливается на главный экран смартфона и работает без интернета.
+---
 
-В приложении реализована модульная архитектура: все продвинутые функции можно включать и выключать в настройках по отдельности, сохраняя интерфейс простым и чистым для новых пользователей.
+## 🇷🇺 Русский
+
+**Ritual** — это быстрое, эстетичное и полностью приватное веб-приложение для контроля ежедневных привычек, приема витаминов и уходовой косметики.
+
+Приложение спроектировано как **Progressive Web App (PWA)**: оно устанавливается прямо на экран вашего смартфона или компьютера, работает полностью автономно без интернета и мгновенно запускается.
+
+### 🎯 Философия проекта: Приватность прежде всего
+Мы считаем, что данные о вашем здоровье и ежедневной рутине должны принадлежать только вам. 
+* 🔒 **Без регистрации и SMS**: Никаких аккаунтов, email или номеров телефона.
+* ☁️ **Никаких серверов**: Ваши данные никогда не покинут устройство и хранятся исключительно в локальной памяти браузера (`localStorage`).
+* 📦 **Полный контроль**: Вы можете в любой момент выгрузить резервную копию своих данных в один клик.
+
+---
+
+### 🗺️ Содержание
+1. [Возможности приложения](#-возможности)
+2. [Модульная архитектура](#%EF%B8%8F-модульная-настройка)
+3. [Как установить на устройство](#-установка-pwa)
+4. [Быстрый запуск для разработчиков](#-локальный-запуск)
+5. [Структура проекта](#-структура-проекта)
+6. [Тестирование](#-тестирование)
+7. [Лицензия](#-лицензия)
 
 ---
 
 ### ✨ Возможности
 
-#### 💊 Трекер добавок
-- **Блоки по времени суток** — создавай разделы «Утро», «День», «Вечер» и любые другие.
-- **Кастомизация** — название, подзаголовок, emoji и цветовая тема для каждого блока.
-- **Ежедневный трекинг** — отмечай принятые добавки галочкой, прогресс-бар дня, кнопка «✓ Все» для быстрой отметки целого блока.
-- **Автосброс** — прогресс сбрасывается автоматически при наступлении нового дня.
-- **Drag & Drop** — меняй порядок блоков и добавок, перетаскивай добавки между блоками.
+#### 💊 Базовый трекер добавок
+* **Дневные блоки** — группируйте витамины по времени приема: «Утро», «День», «Вечер» или создавайте свои кастомные группы.
+* **Кастомизация** — выбирайте подходящие emoji, меняйте названия и цветовые темы блоков для быстрого ориентирования.
+* **Интуитивный трекинг** — отмечайте приемы одним касанием, следите за процентом выполнения на стильном прогресс-баре и используйте кнопку «✓ Все» для быстрого завершения целого блока.
+* **Умный автосброс** — приложение само понимает, когда наступил новый день, и плавно сбрасывает галочки прогресса.
 
-#### ⚙️ Модульные функции (Включаются в Настройках)
-- **🧴 Раздел «Уход за кожей»** — включает отдельную вкладку в нижней навигации для отслеживания утренней и вечерней рутины ухода.
-  - **Три типа расписания**: Ежедневно, по выбранным дням недели (например, только Пн, Ср, Пт) или N раз в неделю с интерактивными счетчиками.
-  - **Drag & Drop** — меняй порядок уходовых средств в режиме настройки.
-  - **Недельный сброс** — счетчики частоты обнуляются с началом новой ISO-недели.
-- **📅 Расписание добавок по дням недели** — возможность настраивать прием конкретных добавок в определенные дни (например, только по средам). Добавки, не запланированные на сегодня, автоматически скрываются с главного экрана (или приглушаются в режиме настройки). Прогресс-бар дня учитывает только запланированные на сегодня элементы.
-- **📦 Счетчик запасов таблеток** — отслеживает количество капсул в банке и списывает разовую дозу при отметке приема (и возвращает при снятии отметки). Поддерживает автосписание при групповой отметке «✓ Все». Показывает оранжевый предупреждающий бейдж `⚠️ Осталось: N шт.`, когда запас подходит к концу.
-- **⏳ Сроки годности косметики (EXP и PAO)** — рассчитывает остаточный срок использования средств ухода по дате открытия и периоду PAO (в месяцах) или по абсолютному сроку EXP. Выводит на карточках предупреждающие бейджи:
-  - `⚠️ Просрочено` (красный) — средство использовать небезопасно.
-  - `⏳ Истекает через N дн.` (желтый) — если до конца срока осталось менее 30 дней.
-  - `✓ Свежий` (зеленый) — средство в порядке.
+#### ⚙️ Модульная настройка: Усложняйте только по желанию
+Приложение по умолчанию запускается в минималистичном виде. Если вам нужен расширенный контроль, просто активируйте нужные тумблеры в **Настройках**:
 
-#### 🎨 Дизайн и UX
-- **Модульный интерфейс** — приложение запускается в максимально чистом и минималистичном виде. Дополнительные вкладки и поля форм скрыты, пока вы не включите их в настройках.
-- **Тёмная и светлая тема** — ручная и автоматическая (системная).
-- **Премиум-дизайн** — glassmorphism, плавные анимации, микро-анимации элементов.
-- **100% офлайн** — Service Worker кэширует все файлы для работы без сети.
-
-#### 🔒 Приватность и данные
-- Все данные хранятся только в `localStorage` вашего браузера — никакого сервера, полная анонимность.
-- **Экспорт / импорт** — сохраняй резервную копию в JSON и легко переносите данные на другие устройства.
+* **🧴 Вкладка «Уход за кожей»** — открывает полноценный раздел для контроля утренних и вечерних косметических средств:
+  * *Три типа расписания*: Ежедневно, по конкретным дням недели (например, только Пн, Ср, Пт) или фиксированное число раз в неделю (`N раз в неделю`).
+  * *Удобное ведение*: Интерактивные пузырьки дней недели с галочками и прогресс-бары частоты использования.
+* **📅 Расписание добавок по дням** — позволяет пить определенные витамины строго в выбранные дни. В обычные дни эти добавки скрываются с экрана, чтобы не перегружать вас лишней информацией.
+* **📦 Учет запасов (Счетчик таблеток)** — автоматически списывает капсулы из банки при отметке приема. Когда запас подходит к критическому порогу (менее 10 шт. или на 5 дней приема), рядом с добавкой загорается предупреждающий оранжевый бейдж `⚠️ Осталось: N шт.`.
+* **⏳ Контроль свежести косметики (EXP и PAO)** — следит за сроками годности кремов и сывороток по дате открытия (PAO) или абсолютному сроку годности (EXP), отображая понятные цветовые статусы (`⚠️ Просрочено`, `⏳ Истекает через N дней` или `✓ Свежий`).
 
 ---
 
-### 📱 Как установить на телефон
+### 📱 Установка (PWA)
 
-1. Открой приложение в браузере смартфона.
-2. **iOS (Safari)**: Нажми кнопку «Поделиться» → «На экран "Домой"».
-3. **Android (Chrome)**: Нажми меню `⋮` → «Установить приложение» или «Добавить на главный экран».
+Благодаря технологии Progressive Web App, Ritual работает как нативное приложение:
 
-На рабочем столе появится иконка **Ritual** — приложение откроется в полноэкранном режиме без интерфейса браузера.
+* **iOS (Safari)**:
+  1. Откройте сайт приложения.
+  2. Нажмите кнопку **«Поделиться»** (квадрат со стрелкой).
+  3. Выберите **«На экран "Домой"»**.
+* **Android (Chrome / Firefox)**:
+  1. Откройте сайт приложения.
+  2. В правом верхнем углу нажмите на меню `⋮`.
+  3. Выберите **«Установить приложение»** или **«Добавить на главный экран»**.
+
+Приложение появится на вашем рабочем столе с собственной иконкой и будет запускаться в полноэкранном режиме, скрывая адресную строку браузера.
 
 ---
 
-### 🛠️ Локальная разработка
+### 💻 Локальный запуск
 
-Проект написан на чистом Vanilla HTML / CSS / JS — сборка не требуется. Запусти любой статический сервер:
+Ritual написан на чистом Vanilla HTML, CSS и JavaScript без использования сложных сборщиков (Webpack, Vite и др.). Для запуска на компьютере достаточно любого локального сервера:
 
 ```bash
-# Python
+# Вариант 1: С помощью встроенного модуля Python (если установлен Python)
 python -m http.server 8000
 
-# Node.js (npx)
+# Вариант 2: С помощью Node.js (npx)
 npx serve .
 ```
 
-Для запуска интеграционных тестов (требуется Python и Chrome):
-```bash
-pip install pytest selenium
-python -m pytest tests/
-```
-
----
-
-### 🧬 Стек
-
-| Технология | Роль |
-|---|---|
-| HTML5 / CSS3 | Семантическая вёрстка, CSS Custom Properties, Grid & Flexbox, кастомные переключатели |
-| JavaScript ES6+ | Модульная логика, стейт, рендеринг списков, расчет сроков годности, LocalStorage, File API |
-| SortableJS | Drag & Drop списков на мобильных |
-| PWA (Manifest + SW) | Установка на HomeScreen, офлайн-режим, автоматическое обновление кэша (Stale-While-Revalidate) |
+После этого откройте в браузере адрес `http://localhost:8000` (или `http://localhost:3000` при использовании `serve`).
 
 ---
 
@@ -92,101 +109,120 @@ python -m pytest tests/
 
 ```
 ritual/
-├── index.html          # Основной HTML, модальные окна, структура форм
-├── manifest.json       # PWA-манифест (имя, иконки, цвета)
-├── sw.js               # Service Worker (кэширование и фоновое обновление)
-├── icon.png            # Иконка приложения
+├── index.html          # Вся разметка приложения, модальные окна настроек и добавления
+├── manifest.json       # PWA манифест конфигурации отображения на экране
+├── sw.js               # Service Worker для кэширования статики и автообновления приложения
+├── icon.png            # Брендовая иконка приложения
 ├── css/
-│   └── app.css         # Все стили: дизайн-система, темы, бейджи остатков и годности
+│   └── app.css         # Стилистическая система: CSS Custom Properties, адаптивность и темы
 ├── js/
-│   └── app.js          # Вся логика: стейт, модульные настройки, расчеты дат и запасов, D&D
+│   └── app.js          # Логика: управление состоянием, рендеринг, пересчет дат и Drag-and-Drop
 └── tests/
-    └── test_ritual.py  # Интеграционные E2E тесты (pytest + Selenium)
+    └── test_ritual.py  # Интеграционные тесты (pytest + Selenium) для проверки всех сценариев
 ```
 
 ---
 
-## English
+### 🧪 Тестирование
 
-**Ritual** is a beautiful, fast, and fully private web application for tracking your daily rituals: vitamins, supplements, and skincare routines.
+Для гарантии стабильности в проекте написаны автоматические end-to-end тесты с использованием Selenium. Тесты имитируют реальные действия пользователя (клик по кнопкам, ввод данных, открытие настроек) в безголовом режиме Chrome.
 
-Designed as a **Progressive Web App (PWA)** — it installs on your smartphone's home screen and works completely offline.
+**Запуск тестов:**
+1. Установите зависимости тестирования:
+   ```bash
+   pip install pytest selenium
+   ```
+2. Запустите тесты:
+   ```bash
+   python -m pytest tests/
+   ```
 
-It features a modular layout where advanced options can be toggled on/off individually in Settings, keeping the interface clean and simple for new users.
+---
+
+### 📄 Лицензия
+
+Проект распространяется под свободной лицензией **MIT**. Вы можете свободно использовать, модифицировать и распространять этот код.
+
+---
+
+## 🇺🇸 English
+
+**Ritual** is a fast, visually stunning, and completely private web application for tracking your daily habits, supplements, and skincare routines.
+
+Built as a **Progressive Web App (PWA)**, it installs directly onto your phone or computer, operates fully offline, and launches instantly.
+
+### 🎯 Core Philosophy: Absolute Privacy
+We believe your personal wellness data should belong to you and only you.
+* 🔒 **Zero Registration**: No accounts, emails, or phone numbers required.
+* ☁️ **No Cloud Servers**: Your data never leaves your device; it is stored strictly in browser memory (`localStorage`).
+* 📦 **Full Ownership**: Export your data into a JSON file at any time with a single click.
+
+---
+
+### 🗺️ Table of Contents
+1. [Features](#-features)
+2. [Modular Architecture](#%EF%B8%8F-modular-options)
+3. [PWA Installation](#-pwa-installation)
+4. [Local Development](#-local-development)
+5. [Project Directory Structure](#-project-structure)
+6. [Testing Guide](#-testing)
+7. [License](#-license)
 
 ---
 
 ### ✨ Features
 
-#### 💊 Supplement Tracker
-- **Blocks by Time of Day** — create custom sections like "Morning", "Afternoon", "Evening", and more.
-- **Customization** — name, subtitle, emoji, and a unique color theme for each block.
-- **Daily Tracking** — check off taken supplements, view a daily progress bar, and use the "✓ All" button to quickly mark an entire block.
-- **Auto-reset** — progress resets automatically at midnight.
-- **Drag & Drop** — reorder blocks and items, and drag supplements between blocks.
+#### 💊 Core Supplement Tracker
+* **Time-of-day Blocks** — organize supplements into clean sections like "Morning", "Afternoon", "Evening", or your own custom groups.
+* **Customization** — choose relevant emojis, name your blocks, and pick color themes for clear visualization.
+* **Intuitive Tracking** — check off items with a single tap, track daily progress via a smooth completion bar, and use "✓ All" to quickly finish a block.
+* **Automated Reset** — the app automatically detects when a new day starts and resets your progress checkmarks.
 
-#### ⚙️ Modular Features (Toggleable in Settings)
-- **🧴 Skincare Section** — enables a bottom navigation bar and a dedicated screen for morning and evening skincare routines.
-  - **Three Schedule Types**: Daily, specific days of the week (e.g. Mon, Wed, Fri), or N times a week with interactive progress counters.
-  - **Drag & Drop** — reorder skincare cards in edit mode.
-  - **Weekly Reset** — frequency counters automatically reset at the start of a new ISO week.
-- **📅 Supplement Scheduling** — schedule supplements for specific days of the week (e.g., Wednesdays only). Off-day supplements are hidden from the dashboard (or dimmed in edit mode) to focus your attention, and the progress bar adjusts to count only today's schedule.
-- **📦 Pill Stock Counter** — tracks remaining capsules/pills and automatically decrements the dosage when marked as checked (and increments back when unchecked). Supports bulk updates via "✓ All". Displays an orange warning badge `⚠️ Remaining: N` when stocks run low.
-- **⏳ Skincare Expiration Tracker (EXP & PAO)** — monitors opened dates, Period After Opening (PAO) months, and absolute expiration dates (EXP). Renders status badges on skincare cards:
-  - `⚠️ Expired` (red) — unsafe to use.
-  - `⏳ Expires in N days` (yellow) — appears if expiration is less than 30 days away.
-  - `✓ Fresh` (green) — item is safe to use.
+#### ⚙️ Modular Options: Add Complexity Only When Needed
+Ritual starts with a clean, distraction-free setup. When you need advanced tracking, activate the modules in **Settings**:
 
-#### 🎨 Design & UX
-- **Modular Layout** — starts with a minimalist setup. Advanced form fields and tabs remain completely hidden until enabled in settings.
-- **Dark & Light Themes** — manual toggle or automatic system matching.
-- **Premium Aesthetics** — glassmorphism, smooth animations, and elegant micro-interactions.
-- **100% Offline** — Service Worker caches all assets for offline use.
-
-#### 🔒 Privacy & Data
-- All data is stored locally in the browser's `localStorage` — no servers, no databases, absolute privacy.
-- **Export / Import** — save backups to JSON files and restore them on other devices.
+* **🧴 Skincare Tab** — unlocks a dedicated screen to manage your morning and evening skincare routines:
+  * *Three Schedule Types*: Daily, specific days (e.g. Mon, Wed, Fri), or fixed weekly frequency (`N times a week`).
+  * *Visual Progress*: Interactive day-bubbles with checkmarks and weekly progress indicators.
+* **📅 Supplement Scheduling** — schedule supplements for specific days. Off-day items are hidden from the dashboard, keeping your daily list focused.
+* **📦 Inventory Stock Counter** — decrements pill counts automatically as you log your intake. Triggers an orange warning badge `⚠️ Remaining: N` when stocks run low (under 10 pills or 5 days of dosage).
+* **⏳ Expiration Control (EXP & PAO)** — monitors product shelf-life using open dates (PAO) or expiration dates (EXP), displaying status badges:
+  * `⚠️ Expired` (red) — unsafe to use.
+  * `⏳ Expires in N days` (yellow) — shows when there are fewer than 30 days left.
+  * `✓ Fresh` (green) — product is fully safe.
 
 ---
 
-### 📱 How to Install on Your Phone
+### 📱 PWA Installation
 
-1. Open the app link in your smartphone's browser.
-2. **iOS (Safari)**: Tap "Share" → "Add to Home Screen".
-3. **Android (Chrome)**: Tap menu `⋮` → "Install app" or "Add to home screen".
+Thanks to PWA technology, Ritual looks and feels like a native app:
 
-The **Ritual** icon will appear on your home screen, and the app will open in fullscreen mode without any browser interface.
+* **iOS (Safari)**:
+  1. Open the app URL.
+  2. Tap the **Share** button.
+  3. Select **"Add to Home Screen"**.
+* **Android (Chrome / Firefox)**:
+  1. Open the app URL.
+  2. Tap the menu icon `⋮`.
+  3. Select **"Install app"** or **"Add to home screen"**.
+
+A beautiful **Ritual** icon will appear on your home screen, launching the application in fullscreen mode.
 
 ---
 
-### 🛠️ Local Development
+### 💻 Local Development
 
-The project is built with pure Vanilla HTML / CSS / JS — no build tools or bundlers are required. Run any static server:
+The project is lightweight and written in pure Vanilla HTML, CSS, and JS. No complicated bundlers or build steps needed. Spin up any static web server:
 
 ```bash
 # Python
 python -m http.server 8000
 
-# Node.js (npx)
+# Node.js
 npx serve .
 ```
 
-To run integration E2E tests (requires Python and Chrome):
-```bash
-pip install pytest selenium
-python -m pytest tests/
-```
-
----
-
-### 🧬 Tech Stack
-
-| Technology | Role |
-|---|---|
-| HTML5 / CSS3 | Semantic markup, CSS Custom Properties, Grid & Flexbox, custom switches |
-| JavaScript ES6+ | Modular state, DOM rendering, date and stock calculations, LocalStorage, File API |
-| SortableJS | Drag & Drop lists for mobile browsers |
-| PWA (Manifest + SW) | Home screen installation, offline mode, background update checking (Stale-While-Revalidate) |
+Open `http://localhost:8000` (or `http://localhost:3000` with `serve`) in your browser.
 
 ---
 
@@ -194,14 +230,36 @@ python -m pytest tests/
 
 ```
 ritual/
-├── index.html          # Main HTML structure and modals
-├── manifest.json       # PWA manifest (app name, icons, colors)
-├── sw.js               # Service Worker (cache management and update checks)
-├── icon.png            # App icon
+├── index.html          # Main HTML structure, styling references, and modals
+├── manifest.json       # PWA configurations for launcher icons and colors
+├── sw.js               # Service Worker for state caching and offline capability
+├── icon.png            # High-resolution application icon
 ├── css/
-│   └── app.css         # All styles: design system, themes, layouts, status badges
+│   └── app.css         # Styling system: fluid layouts, themes, responsive CSS Grid
 ├── js/
-│   └── app.js          # Core JS: modular state, expiration and stock logic, rendering, D&D
+│   └── app.js          # Logic: modular toggles, state, date, and drag-and-drop engines
 └── tests/
-    └── test_ritual.py  # E2E integration tests (pytest + Selenium)
+    └── test_ritual.py  # Automation tests (pytest + Selenium) for user actions
 ```
+
+---
+
+### 🧪 Testing
+
+The repository includes integration tests written in Python using pytest and Selenium to test user scenarios in headless Chrome.
+
+**How to run tests:**
+1. Install testing packages:
+   ```bash
+   pip install pytest selenium
+   ```
+2. Run the test suite:
+   ```bash
+   python -m pytest tests/
+   ```
+
+---
+
+### 📄 License
+
+This project is licensed under the terms of the **MIT License**. Feel free to use, modify, and distribute the code as you wish.
