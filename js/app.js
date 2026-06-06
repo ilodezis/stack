@@ -9,7 +9,11 @@ let state = {
   lastWeekNumber: 0,
   settings: {
     dailyTrackingEnabled: false,
-    onboardingCompleted: false
+    onboardingCompleted: false,
+    skincareEnabled: false,
+    suppSchedulingEnabled: false,
+    suppStockEnabled: false,
+    skinExpirationEnabled: false
   }
 };
 
@@ -24,7 +28,11 @@ const DEFAULT_STATE = {
   lastWeekNumber: 0,
   settings: {
     dailyTrackingEnabled: false,
-    onboardingCompleted: false
+    onboardingCompleted: false,
+    skincareEnabled: false,
+    suppSchedulingEnabled: false,
+    suppStockEnabled: false,
+    skinExpirationEnabled: false
   }
 };
 
@@ -71,7 +79,11 @@ const DEMO_STATE = {
   lastCompletionDate: '',
   settings: {
     dailyTrackingEnabled: false,
-    onboardingCompleted: true
+    onboardingCompleted: true,
+    skincareEnabled: false,
+    suppSchedulingEnabled: false,
+    suppStockEnabled: false,
+    skinExpirationEnabled: false
   }
 };
 
@@ -99,6 +111,9 @@ function getCurrentWeekNumber() {
 }
 
 function isScheduledForToday(item) {
+  if (!state.settings.suppSchedulingEnabled) {
+    return true;
+  }
   if (!item.scheduleType || item.scheduleType === 'daily') {
     return true;
   }
@@ -121,9 +136,22 @@ function loadState() {
         state = JSON.parse(JSON.stringify(DEFAULT_STATE));
       }
       if (!state.settings) {
-        state.settings = { dailyTrackingEnabled: false, onboardingCompleted: true };
-      } else if (state.settings.onboardingCompleted === undefined) {
-        state.settings.onboardingCompleted = true; // Migrate existing users
+        state.settings = {
+          dailyTrackingEnabled: false,
+          onboardingCompleted: true,
+          skincareEnabled: false,
+          suppSchedulingEnabled: false,
+          suppStockEnabled: false,
+          skinExpirationEnabled: false
+        };
+      } else {
+        if (state.settings.onboardingCompleted === undefined) {
+          state.settings.onboardingCompleted = true; // Migrate existing users
+        }
+        if (state.settings.skincareEnabled === undefined) state.settings.skincareEnabled = false;
+        if (state.settings.suppSchedulingEnabled === undefined) state.settings.suppSchedulingEnabled = false;
+        if (state.settings.suppStockEnabled === undefined) state.settings.suppStockEnabled = false;
+        if (state.settings.skinExpirationEnabled === undefined) state.settings.skinExpirationEnabled = false;
       }
       // Migrate: add skincareItems if missing
       if (!state.skincareItems) {
@@ -159,19 +187,62 @@ function loadState() {
   if (state.lastWeekNumber !== currentWeek) {
     state.skincareItems.forEach(item => {
       item.currentWeekCount = 0;
-      // For 'days' type — we keep history but mark this week as fresh
-      // (history is date-keyed, so no deletion needed)
     });
     state.lastWeekNumber = currentWeek;
     saveState();
   }
+  
+  applyFeatureToggles();
 }
 
 // Save state to local storage
 function saveState() {
   localStorage.setItem('supplement_tracker_state', JSON.stringify(state));
+  applyFeatureToggles();
   renderProgressBar();
   updateResetFABVisibility();
+}
+
+function applyFeatureToggles() {
+  // 1. Skincare tab toggle
+  const bottomNav = document.querySelector('.bottom-nav');
+  if (bottomNav) {
+    if (state.settings.skincareEnabled) {
+      bottomNav.style.display = 'flex';
+      document.body.classList.remove('no-bottom-nav');
+    } else {
+      bottomNav.style.display = 'none';
+      document.body.classList.add('no-bottom-nav');
+      // Force active screen to supplements
+      const navSupplements = document.getElementById('nav-supplements');
+      const navSkincare = document.getElementById('nav-skincare');
+      const screenSupplements = document.getElementById('screen-supplements');
+      const screenSkincare = document.getElementById('screen-skincare');
+      
+      if (navSupplements) navSupplements.classList.add('active');
+      if (navSkincare) navSkincare.classList.remove('active');
+      if (screenSupplements) screenSupplements.classList.add('active');
+      if (screenSkincare) screenSkincare.classList.remove('active');
+    }
+  }
+
+  // 2. Supplements scheduling toggle
+  const itemSchedGroup = document.getElementById('item-scheduling-toggle-group');
+  if (itemSchedGroup) {
+    itemSchedGroup.style.display = state.settings.suppSchedulingEnabled ? 'block' : 'none';
+  }
+
+  // 3. Supplements stock toggle
+  const itemStockGroup = document.getElementById('item-stock-toggle-group');
+  if (itemStockGroup) {
+    itemStockGroup.style.display = state.settings.suppStockEnabled ? 'block' : 'none';
+  }
+
+  // 4. Skincare expiration toggle
+  const skincareExpGroup = document.getElementById('skincare-expiration-toggle-group');
+  if (skincareExpGroup) {
+    skincareExpGroup.style.display = state.settings.skinExpirationEnabled ? 'block' : 'none';
+  }
 }
 
 // --- DOM ELEMENTS ---
@@ -190,6 +261,10 @@ const searchClearBtn = document.getElementById('search-clear-btn');
 const settingsBtn = document.getElementById('settings-btn');
 const toastEl = document.getElementById('toast');
 const settingDailyTracking = document.getElementById('setting-daily-tracking');
+const settingSkincareEnabled = document.getElementById('setting-skincare-enabled');
+const settingSuppScheduling = document.getElementById('setting-supp-scheduling');
+const settingSuppStock = document.getElementById('setting-supp-stock');
+const settingSkinExpiration = document.getElementById('setting-skin-expiration');
 
 // Modals
 const dialogBlock = document.getElementById('dialog-block');
@@ -360,13 +435,13 @@ function renderApp() {
       }
       
       let scheduleBadge = '';
-      if (item.scheduleType === 'days' && item.scheduleDays && item.scheduleDays.length > 0) {
+      if (state.settings.suppSchedulingEnabled && item.scheduleType === 'days' && item.scheduleDays && item.scheduleDays.length > 0) {
         const dayLabels = item.scheduleDays.map(d => DAY_LABELS[d]).join(', ');
         scheduleBadge = `<span class="row-schedule-badge">📅 ${dayLabels}</span>`;
       }
       
       let stockBadge = '';
-      if (item.stockTotal !== undefined && item.stockTotal !== null && item.stockTotal !== '') {
+      if (state.settings.suppStockEnabled && item.stockTotal !== undefined && item.stockTotal !== null && item.stockTotal !== '') {
         const total = parseInt(item.stockTotal);
         const take = parseInt(item.stockTake) || 1;
         if (total <= 10 || total <= take * 5) {
@@ -405,7 +480,7 @@ function renderApp() {
         item.checked = !item.checked;
         
         // Stock decrement/increment logic
-        if (item.stockTotal !== undefined && item.stockTotal !== null && item.stockTotal !== '') {
+        if (state.settings.suppStockEnabled && item.stockTotal !== undefined && item.stockTotal !== null && item.stockTotal !== '') {
           const take = parseInt(item.stockTake) || 1;
           const totalVal = parseInt(item.stockTotal);
           if (item.checked) {
@@ -461,7 +536,7 @@ function renderApp() {
         i.checked = !allDone;
         
         // Apply stock adjustment on toggle
-        if (i.stockTotal !== undefined && i.stockTotal !== null && i.stockTotal !== '') {
+        if (state.settings.suppStockEnabled && i.stockTotal !== undefined && i.stockTotal !== null && i.stockTotal !== '') {
           const take = parseInt(i.stockTake) || 1;
           const totalVal = parseInt(i.stockTotal);
           if (i.checked && !wasChecked) {
@@ -837,6 +912,10 @@ document.querySelectorAll('input[name="item-schedule"]').forEach(radio => {
 // --- SETTINGS DIALOG ACTIONS ---
 settingsBtn.addEventListener('click', () => {
   settingDailyTracking.checked = state.settings.dailyTrackingEnabled;
+  settingSkincareEnabled.checked = state.settings.skincareEnabled || false;
+  settingSuppScheduling.checked = state.settings.suppSchedulingEnabled || false;
+  settingSuppStock.checked = state.settings.suppStockEnabled || false;
+  settingSkinExpiration.checked = state.settings.skinExpirationEnabled || false;
   dialogSettings.showModal();
 });
 
@@ -845,6 +924,35 @@ settingDailyTracking.addEventListener('change', (e) => {
   saveState();
   renderApp();
   showToast(state.settings.dailyTrackingEnabled ? 'Отметка о приеме включена' : 'Отметка о приеме выключена');
+});
+
+settingSkincareEnabled.addEventListener('change', (e) => {
+  state.settings.skincareEnabled = e.target.checked;
+  saveState();
+  renderApp();
+  renderSkincareScreen();
+  showToast(state.settings.skincareEnabled ? 'Раздел Уход включен' : 'Раздел Уход выключен');
+});
+
+settingSuppScheduling.addEventListener('change', (e) => {
+  state.settings.suppSchedulingEnabled = e.target.checked;
+  saveState();
+  renderApp();
+  showToast(state.settings.suppSchedulingEnabled ? 'Расписание добавок включено' : 'Расписание добавок выключено');
+});
+
+settingSuppStock.addEventListener('change', (e) => {
+  state.settings.suppStockEnabled = e.target.checked;
+  saveState();
+  renderApp();
+  showToast(state.settings.suppStockEnabled ? 'Учет запасов добавок включен' : 'Учет запасов добавок выключен');
+});
+
+settingSkinExpiration.addEventListener('change', (e) => {
+  state.settings.skinExpirationEnabled = e.target.checked;
+  saveState();
+  renderSkincareScreen();
+  showToast(state.settings.skinExpirationEnabled ? 'Сроки годности косметики включены' : 'Сроки годности косметики выключены');
 });
 
 // Reset stack to default state
@@ -1170,33 +1278,35 @@ function buildSkincareCard(item, timing) {
   let expiryBadgeHTML = '';
   let expDate = null;
   
-  if (item.openedDate && item.paoMonths) {
-    const open = new Date(item.openedDate);
-    open.setMonth(open.getMonth() + parseInt(item.paoMonths));
-    expDate = open;
-  }
-  if (item.expirationDate) {
-    const directExp = new Date(item.expirationDate);
-    if (!expDate || directExp < expDate) {
-      expDate = directExp;
+  if (state.settings.skinExpirationEnabled) {
+    if (item.openedDate && item.paoMonths) {
+      const open = new Date(item.openedDate);
+      open.setMonth(open.getMonth() + parseInt(item.paoMonths));
+      expDate = open;
     }
-  }
-  
-  if (expDate) {
-    const todayVal = new Date(getTodayString());
-    todayVal.setHours(0,0,0,0);
-    const expDateZero = new Date(expDate);
-    expDateZero.setHours(0,0,0,0);
+    if (item.expirationDate) {
+      const directExp = new Date(item.expirationDate);
+      if (!expDate || directExp < expDate) {
+        expDate = directExp;
+      }
+    }
     
-    const diffTime = expDateZero - todayVal;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays < 0) {
-      expiryBadgeHTML = `<span class="skincare-expiry-badge expired">⚠️ Просрочено</span>`;
-    } else if (diffDays <= 30) {
-      expiryBadgeHTML = `<span class="skincare-expiry-badge warning">⏳ Истекает через ${diffDays} дн.</span>`;
-    } else {
-      expiryBadgeHTML = `<span class="skincare-expiry-badge fresh">✓ Свежий</span>`;
+    if (expDate) {
+      const todayVal = new Date(getTodayString());
+      todayVal.setHours(0,0,0,0);
+      const expDateZero = new Date(expDate);
+      expDateZero.setHours(0,0,0,0);
+      
+      const diffTime = expDateZero - todayVal;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays < 0) {
+        expiryBadgeHTML = `<span class="skincare-expiry-badge expired">⚠️ Просрочено</span>`;
+      } else if (diffDays <= 30) {
+        expiryBadgeHTML = `<span class="skincare-expiry-badge warning">⏳ Истекает через ${diffDays} дн.</span>`;
+      } else {
+        expiryBadgeHTML = `<span class="skincare-expiry-badge fresh">✓ Свежий</span>`;
+      }
     }
   }
 

@@ -115,6 +115,17 @@ def test_supplement_scheduling_and_stock(server, driver):
     time.sleep(0.1)
     driver.find_element(By.ID, "btn-onboarding-demo").click()
     time.sleep(0.5)
+
+    # Enable scheduling and stock toggles via JS (since they are off by default now)
+    driver.execute_script("""
+        const s1 = document.getElementById('setting-supp-scheduling');
+        s1.checked = true;
+        s1.dispatchEvent(new Event('change'));
+        const s2 = document.getElementById('setting-supp-stock');
+        s2.checked = true;
+        s2.dispatchEvent(new Event('change'));
+    """)
+    time.sleep(0.2)
     
     # Now we have demo supplements. Let's toggle Edit Mode (Настроить)
     edit_toggle = driver.find_element(By.ID, "edit-mode-toggle")
@@ -232,6 +243,17 @@ def test_skincare_expiry_badges(server, driver):
     time.sleep(0.1)
     driver.find_element(By.ID, "btn-onboarding-demo").click()
     time.sleep(0.5)
+
+    # Enable skincare and skincare expiration toggles via JS
+    driver.execute_script("""
+        const s1 = document.getElementById('setting-skincare-enabled');
+        s1.checked = true;
+        s1.dispatchEvent(new Event('change'));
+        const s2 = document.getElementById('setting-skin-expiration');
+        s2.checked = true;
+        s2.dispatchEvent(new Event('change'));
+    """)
+    time.sleep(0.2)
     
     # Switch to Skincare screen
     driver.find_element(By.ID, "nav-skincare").click()
@@ -279,3 +301,85 @@ def test_skincare_expiry_badges(server, driver):
     warning_badge = wait.until(EC.presence_of_element_located((By.XPATH, "//span[contains(text(), 'Скоро закончится')]/ancestor::div[contains(@class, 'skincare-card')]//span[contains(@class, 'warning') or contains(text(), 'Истекает')]")))
     assert warning_badge.is_displayed()
     assert "10" in warning_badge.text
+
+def test_feature_toggles_default_disabled(server, driver):
+    driver.get(f"http://127.0.0.1:{PORT}/")
+    wait = WebDriverWait(driver, 5)
+    
+    # Skip onboarding using Clean state
+    wait.until(EC.presence_of_element_located((By.ID, "dialog-onboarding")))
+    driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding .btn-next-step").click()
+    time.sleep(0.1)
+    driver.find_element(By.XPATH, "//div[@data-step='2']//button[contains(text(), 'Продолжить')]").click()
+    time.sleep(0.1)
+    driver.find_element(By.ID, "btn-onboarding-clean").click()
+    time.sleep(0.5)
+    
+    # 1. Skincare nav should be hidden by default
+    bottom_nav = driver.find_element(By.CLASS_NAME, "bottom-nav")
+    assert bottom_nav.value_of_css_property("display") == "none"
+    
+    # 2. Add block so we can open add-item modal
+    # Toggle Edit Mode (Настроить)
+    edit_toggle = driver.find_element(By.ID, "edit-mode-toggle")
+    driver.execute_script("arguments[0].click();", edit_toggle)
+    time.sleep(0.2)
+    
+    # Open block modal
+    btn_first_block = driver.find_element(By.ID, "btn-create-first-block")
+    driver.execute_script("arguments[0].click();", btn_first_block)
+    time.sleep(0.2)
+    driver.find_element(By.ID, "block-name").send_keys("Утро")
+    btn_block_submit = driver.find_element(By.CSS_SELECTOR, "#form-block button[type='submit']")
+    driver.execute_script("arguments[0].click();", btn_block_submit)
+    time.sleep(0.3)
+    
+    # Open add-item modal
+    btn_add_item = driver.find_element(By.CSS_SELECTOR, "button.add-item-card-btn")
+    driver.execute_script("arguments[0].click();", btn_add_item)
+    time.sleep(0.3)
+    
+    # Scheduling fields and stock control fields in the form should be hidden by default
+    sched_group = driver.find_element(By.ID, "item-scheduling-toggle-group")
+    assert sched_group.value_of_css_property("display") == "none"
+    
+    stock_group = driver.find_element(By.ID, "item-stock-toggle-group")
+    assert stock_group.value_of_css_property("display") == "none"
+    
+    # Close add-item modal
+    btn_item_cancel = driver.find_element(By.CSS_SELECTOR, "#dialog-item .btn-cancel")
+    driver.execute_script("arguments[0].click();", btn_item_cancel)
+    time.sleep(0.2)
+    
+    # 3. Enable skincare setting and verify nav becomes visible
+    driver.execute_script("""
+        const cb = document.getElementById('setting-skincare-enabled');
+        cb.checked = true;
+        cb.dispatchEvent(new Event('change'));
+    """)
+    time.sleep(0.2)
+    assert bottom_nav.value_of_css_property("display") == "flex"
+    
+    # Switch to Skincare screen
+    nav_skincare = driver.find_element(By.ID, "nav-skincare")
+    driver.execute_script("arguments[0].click();", nav_skincare)
+    time.sleep(0.3)
+    
+    # Open skincare edit mode
+    skincare_edit_toggle = driver.find_element(By.ID, "skincare-edit-toggle")
+    driver.execute_script("arguments[0].click();", skincare_edit_toggle)
+    time.sleep(0.2)
+    
+    # Open add-skincare modal
+    btn_add_skincare = driver.find_element(By.ID, "btn-add-skincare-morning")
+    driver.execute_script("arguments[0].click();", btn_add_skincare)
+    time.sleep(0.3)
+    
+    # Expiration fields should be hidden by default
+    exp_group = driver.find_element(By.ID, "skincare-expiration-toggle-group")
+    assert exp_group.value_of_css_property("display") == "none"
+    
+    # Close skincare modal
+    btn_skincare_cancel = driver.find_element(By.CSS_SELECTOR, "#dialog-skincare .btn-cancel")
+    driver.execute_script("arguments[0].click();", btn_skincare_cancel)
+    time.sleep(0.2)

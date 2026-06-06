@@ -2123,3 +2123,8 @@ html.dark .skincare-expiry-badge.fresh {
   color: #6ee7b7;
   border-color: rgba(16, 185, 129, 0.2);
 }
+
+/* Adjust layout when bottom nav is hidden */
+.no-bottom-nav .app-content {
+  padding-bottom: 24px;
+}
