@@ -233,6 +233,46 @@
             <input type="text" id="item-cond" placeholder="Например: во время еды">
           </div>
         </div>
+
+        <!-- Supplement Scheduling -->
+        <div class="form-group" style="margin-top: 12px;">
+          <label>Расписание</label>
+          <div class="schedule-type-toggle">
+            <input type="radio" name="item-schedule" id="item-schedule-daily" value="daily" checked>
+            <label for="item-schedule-daily">Ежедневно</label>
+            <input type="radio" name="item-schedule" id="item-schedule-days" value="days">
+            <label for="item-schedule-days">По дням</label>
+          </div>
+        </div>
+
+        <!-- Sub-field: days picker -->
+        <div class="form-group schedule-subfield" id="item-subfield-days">
+          <label>Дни недели</label>
+          <div class="days-picker" id="item-days-picker">
+            <button type="button" class="day-pick-btn" data-day="1">Пн</button>
+            <button type="button" class="day-pick-btn" data-day="2">Вт</button>
+            <button type="button" class="day-pick-btn" data-day="3">Ср</button>
+            <button type="button" class="day-pick-btn" data-day="4">Чт</button>
+            <button type="button" class="day-pick-btn" data-day="5">Пт</button>
+            <button type="button" class="day-pick-btn" data-day="6">Сб</button>
+            <button type="button" class="day-pick-btn" data-day="0">Вс</button>
+          </div>
+        </div>
+
+        <!-- Pill Stock Control -->
+        <div class="form-group border-top-dashed" style="margin-top: 16px; padding-top: 12px;">
+          <label class="section-subtitle">Учет запасов</label>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="item-stock-total">Всего в упаковке (шт.)</label>
+              <input type="number" id="item-stock-total" min="0" placeholder="Например: 60, 120">
+            </div>
+            <div class="form-group">
+              <label for="item-stock-take">Списывать за прием (шт.)</label>
+              <input type="number" id="item-stock-take" min="1" placeholder="Например: 1, 2">
+            </div>
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" id="btn-delete-item" class="btn-action btn-danger" style="display: none;">Удалить</button>
@@ -424,6 +464,27 @@
         <div class="form-group schedule-subfield" id="subfield-frequency">
           <label for="skincare-freq-num">Количество раз в неделю</label>
           <input type="number" id="skincare-freq-num" min="1" max="7" value="3" placeholder="Например: 3">
+        </div>
+
+        <!-- Expiration / PAO fields -->
+        <div class="form-group border-top-dashed" style="margin-top: 16px; padding-top: 12px;">
+          <label class="section-subtitle">Срок годности и PAO</label>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="skincare-opened-date">Дата открытия</label>
+              <input type="date" id="skincare-opened-date">
+            </div>
+            <div class="form-group">
+              <label for="skincare-pao">Срок после открытия (мес.)</label>
+              <input type="number" id="skincare-pao" min="1" max="60" placeholder="Например: 6, 12">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 8px;">
+            <label for="skincare-exp-date">Срок годности (EXP)</label>
+            <input type="date" id="skincare-exp-date">
+          </div>
         </div>
       </div>
       <div class="modal-footer">

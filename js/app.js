@@ -98,6 +98,17 @@ function getCurrentWeekNumber() {
   return getISOWeek(new Date());
 }
 
+function isScheduledForToday(item) {
+  if (!item.scheduleType || item.scheduleType === 'daily') {
+    return true;
+  }
+  if (item.scheduleType === 'days') {
+    const todayDOW = getTodayDOW();
+    return item.scheduleDays && item.scheduleDays.includes(todayDOW);
+  }
+  return true;
+}
+
 // Load state from local storage or set defaults
 function loadState() {
   const localData = localStorage.getItem('supplement_tracker_state');
@@ -120,6 +131,13 @@ function loadState() {
       }
       if (state.lastWeekNumber === undefined) {
         state.lastWeekNumber = getCurrentWeekNumber();
+      }
+      // Migrate items fields
+      if (state.items) {
+        state.items.forEach(item => {
+          if (!item.scheduleType) item.scheduleType = 'daily';
+          if (!item.scheduleDays) item.scheduleDays = [];
+        });
       }
     } catch (e) {
       state = JSON.parse(JSON.stringify(DEFAULT_STATE));
@@ -212,8 +230,9 @@ function renderProgressBar() {
   }
   progressSection.style.display = 'block';
 
-  const total = state.items.length;
-  const completed = state.items.filter(item => item.checked).length;
+  const todayItems = state.items.filter(item => isScheduledForToday(item));
+  const total = todayItems.length;
+  const completed = todayItems.filter(item => item.checked).length;
   const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
   
   progressText.textContent = `${completed} из ${total} (${percentage}%)`;
@@ -317,9 +336,19 @@ function renderApp() {
     
     // Add Row Items
     blockItems.forEach(item => {
+      const isScheduledToday = isScheduledForToday(item);
+      
+      // Perform schedule filter
+      if (!isScheduledToday && !editMode) {
+        return; // Skip rendering
+      }
+      
       const row = document.createElement('div');
       const isItemChecked = state.settings.dailyTrackingEnabled && item.checked;
-      row.className = `row-item ${isItemChecked ? 'checked' : ''}`;
+      let rowClasses = ['row-item'];
+      if (isItemChecked) rowClasses.push('checked');
+      if (!isScheduledToday && editMode) rowClasses.push('not-today');
+      row.className = rowClasses.join(' ');
       row.dataset.id = item.id;
       
       // Perform search filter if active
@@ -330,15 +359,34 @@ function renderApp() {
         }
       }
       
+      let scheduleBadge = '';
+      if (item.scheduleType === 'days' && item.scheduleDays && item.scheduleDays.length > 0) {
+        const dayLabels = item.scheduleDays.map(d => DAY_LABELS[d]).join(', ');
+        scheduleBadge = `<span class="row-schedule-badge">📅 ${dayLabels}</span>`;
+      }
+      
+      let stockBadge = '';
+      if (item.stockTotal !== undefined && item.stockTotal !== null && item.stockTotal !== '') {
+        const total = parseInt(item.stockTotal);
+        const take = parseInt(item.stockTake) || 1;
+        if (total <= 10 || total <= take * 5) {
+          stockBadge = `<span class="stock-warning-badge">Осталось: ${total}</span>`;
+        }
+      }
+      
       row.innerHTML = `
         <div class="row-item-left">
           <div class="custom-checkbox ${isItemChecked ? 'checked' : ''}" style="display: ${state.settings.dailyTrackingEnabled ? 'flex' : 'none'};" role="checkbox" aria-checked="${isItemChecked}"></div>
           <div class="row-content">
             <span class="row-name">${item.name}</span>
-            ${item.cond ? `<span class="row-cond">${item.cond}</span>` : ''}
+            <div class="row-meta">
+              ${item.cond ? `<span class="row-cond">${item.cond}</span>` : ''}
+              ${scheduleBadge}
+            </div>
           </div>
         </div>
         <span class="dose-tag">${item.dose}</span>
+        ${stockBadge}
         <div class="row-edit-actions">
           <button class="btn-card-action btn-edit-item" title="Редактировать">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
@@ -355,12 +403,20 @@ function renderApp() {
         e.stopPropagation();
         if (!state.settings.dailyTrackingEnabled) return;
         item.checked = !item.checked;
-        saveState();
         
-        // Visual toggle without full re-render for smooth response
-        row.classList.toggle('checked', item.checked);
-        checkbox.classList.toggle('checked', item.checked);
-        checkbox.setAttribute('aria-checked', item.checked);
+        // Stock decrement/increment logic
+        if (item.stockTotal !== undefined && item.stockTotal !== null && item.stockTotal !== '') {
+          const take = parseInt(item.stockTake) || 1;
+          const totalVal = parseInt(item.stockTotal);
+          if (item.checked) {
+            item.stockTotal = Math.max(0, totalVal - take);
+          } else {
+            item.stockTotal = totalVal + take;
+          }
+        }
+        
+        saveState();
+        renderApp();
       });
       
       // Row click to toggle checkbox (except in edit mode)
@@ -381,17 +437,41 @@ function renderApp() {
     
     // Mark-all button logic
     const markAllBtn = card.querySelector('.btn-mark-all');
+    const todayBlockItems = blockItems.filter(i => isScheduledForToday(i));
+    
     const updateMarkAllState = () => {
-      const allDone = blockItems.every(i => i.checked);
+      const allDone = todayBlockItems.length > 0 && todayBlockItems.every(i => i.checked);
       markAllBtn.classList.toggle('all-done', allDone);
       markAllBtn.textContent = allDone ? '✓ Готово' : '✓ Все';
+      
+      if (todayBlockItems.length === 0) {
+        markAllBtn.style.display = 'none';
+      } else {
+        markAllBtn.style.display = '';
+      }
     };
     updateMarkAllState();
     markAllBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       if (!state.settings.dailyTrackingEnabled) return;
-      const allDone = blockItems.every(i => i.checked);
-      blockItems.forEach(i => i.checked = !allDone);
+      const allDone = todayBlockItems.every(i => i.checked);
+      
+      todayBlockItems.forEach(i => {
+        const wasChecked = i.checked;
+        i.checked = !allDone;
+        
+        // Apply stock adjustment on toggle
+        if (i.stockTotal !== undefined && i.stockTotal !== null && i.stockTotal !== '') {
+          const take = parseInt(i.stockTake) || 1;
+          const totalVal = parseInt(i.stockTotal);
+          if (i.checked && !wasChecked) {
+            i.stockTotal = Math.max(0, totalVal - take);
+          } else if (!i.checked && wasChecked) {
+            i.stockTotal = totalVal + take;
+          }
+        }
+      });
+      
       saveState();
       renderApp();
     });
@@ -626,6 +706,13 @@ addBlockBtn.addEventListener('click', () => {
 const btnDeleteItem = document.getElementById('btn-delete-item');
 
 function openItemModal(item = null, defaultBlockId = '') {
+  // Reset all fields
+  document.querySelectorAll('#item-days-picker .day-pick-btn').forEach(btn => btn.classList.remove('selected'));
+  document.getElementById('item-subfield-days').classList.remove('visible');
+  document.getElementById('item-schedule-daily').checked = true;
+  document.getElementById('item-stock-total').value = '';
+  document.getElementById('item-stock-take').value = '';
+
   if (item) {
     // Edit existing
     document.getElementById('item-dialog-title').textContent = 'Редактировать';
@@ -634,6 +721,26 @@ function openItemModal(item = null, defaultBlockId = '') {
     document.getElementById('item-name').value = item.name;
     document.getElementById('item-dose').value = item.dose;
     document.getElementById('item-cond').value = item.cond || '';
+    
+    // Set stock values
+    document.getElementById('item-stock-total').value = item.stockTotal !== undefined ? item.stockTotal : '';
+    document.getElementById('item-stock-take').value = item.stockTake !== undefined ? item.stockTake : '';
+    
+    // Set scheduling values
+    const scheduleType = item.scheduleType || 'daily';
+    const scheduleDays = item.scheduleDays || [];
+    
+    const scheduleRadio = document.querySelector(`input[name="item-schedule"][value="${scheduleType}"]`);
+    if (scheduleRadio) scheduleRadio.checked = true;
+    
+    if (scheduleType === 'days') {
+      document.getElementById('item-subfield-days').classList.add('visible');
+      document.querySelectorAll('#item-days-picker .day-pick-btn').forEach(btn => {
+        if (scheduleDays.includes(Number(btn.dataset.day))) {
+          btn.classList.add('selected');
+        }
+      });
+    }
     
     btnDeleteItem.style.display = 'block';
   } else {
@@ -656,6 +763,21 @@ formItem.addEventListener('submit', (e) => {
   const dose = document.getElementById('item-dose').value.trim();
   const cond = document.getElementById('item-cond').value.trim();
   
+  // Read stock control fields
+  const stockTotalInput = document.getElementById('item-stock-total').value;
+  const stockTakeInput = document.getElementById('item-stock-take').value;
+  const stockTotal = stockTotalInput !== '' ? parseInt(stockTotalInput) : undefined;
+  const stockTake = stockTakeInput !== '' ? parseInt(stockTakeInput) : undefined;
+  
+  // Read schedule fields
+  const scheduleType = document.querySelector('input[name="item-schedule"]:checked').value;
+  const scheduleDays = [];
+  if (scheduleType === 'days') {
+    document.querySelectorAll('#item-days-picker .day-pick-btn.selected').forEach(btn => {
+      scheduleDays.push(Number(btn.dataset.day));
+    });
+  }
+  
   if (id) {
     // Update existing
     const item = state.items.find(i => i.id === id);
@@ -663,11 +785,26 @@ formItem.addEventListener('submit', (e) => {
       item.name = name;
       item.dose = dose;
       item.cond = cond;
+      item.scheduleType = scheduleType;
+      item.scheduleDays = scheduleType === 'days' ? scheduleDays : undefined;
+      item.stockTotal = stockTotal;
+      item.stockTake = stockTake;
     }
   } else {
     // Create new
     const newId = `item-${Date.now()}`;
-    state.items.push({ id: newId, blockId, name, dose, cond, checked: false });
+    state.items.push({
+      id: newId,
+      blockId,
+      name,
+      dose,
+      cond,
+      checked: false,
+      scheduleType,
+      scheduleDays: scheduleType === 'days' ? scheduleDays : undefined,
+      stockTotal,
+      stockTake
+    });
   }
   
   saveState();
@@ -687,6 +824,14 @@ btnDeleteItem.addEventListener('click', () => {
     dialogItem.close();
     showToast('Добавка удалена');
   }
+});
+
+// Schedule type radio switching for supplements
+document.querySelectorAll('input[name="item-schedule"]').forEach(radio => {
+  radio.addEventListener('change', () => {
+    const val = document.querySelector('input[name="item-schedule"]:checked').value;
+    document.getElementById('item-subfield-days').classList.toggle('visible', val === 'days');
+  });
 });
 
 // --- SETTINGS DIALOG ACTIONS ---
@@ -1021,13 +1166,50 @@ function buildSkincareCard(item, timing) {
     `;
   }
 
+  // Calculate expiration/freshness info
+  let expiryBadgeHTML = '';
+  let expDate = null;
+  
+  if (item.openedDate && item.paoMonths) {
+    const open = new Date(item.openedDate);
+    open.setMonth(open.getMonth() + parseInt(item.paoMonths));
+    expDate = open;
+  }
+  if (item.expirationDate) {
+    const directExp = new Date(item.expirationDate);
+    if (!expDate || directExp < expDate) {
+      expDate = directExp;
+    }
+  }
+  
+  if (expDate) {
+    const todayVal = new Date(getTodayString());
+    todayVal.setHours(0,0,0,0);
+    const expDateZero = new Date(expDate);
+    expDateZero.setHours(0,0,0,0);
+    
+    const diffTime = expDateZero - todayVal;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) {
+      expiryBadgeHTML = `<span class="skincare-expiry-badge expired">⚠️ Просрочено</span>`;
+    } else if (diffDays <= 30) {
+      expiryBadgeHTML = `<span class="skincare-expiry-badge warning">⏳ Истекает через ${diffDays} дн.</span>`;
+    } else {
+      expiryBadgeHTML = `<span class="skincare-expiry-badge fresh">✓ Свежий</span>`;
+    }
+  }
+
   card.innerHTML = `
     <div class="skincare-card-inner">
       <div class="skincare-card-top">
         <div class="skincare-drag-handle" aria-label="Перетащить">${dragHandleSVG}</div>
         <div class="skincare-card-name-row">
           ${(item.scheduleType === 'days' || item.scheduleType === 'daily') ? '<div class="skincare-done-circle"></div>' : ''}
-          <span class="skincare-card-name">${item.name}</span>
+          <div class="skincare-name-container">
+            <span class="skincare-card-name">${item.name}</span>
+            ${expiryBadgeHTML}
+          </div>
         </div>
         <div class="skincare-card-actions">
           <button class="btn-edit-skincare" data-id="${item.id}" aria-label="Редактировать">${editSVG}</button>
@@ -1182,6 +1364,9 @@ function openSkincareModal(item = null, defaultTiming = 'morning') {
   subfieldFreq.classList.remove('visible');
   // Default: show days subfield, check 'days' radio
   document.getElementById('schedule-days').checked = true;
+  document.getElementById('skincare-opened-date').value = '';
+  document.getElementById('skincare-pao').value = '';
+  document.getElementById('skincare-exp-date').value = '';
 
   if (item) {
     titleEl.textContent = 'Редактировать средство';
@@ -1203,6 +1388,11 @@ function openSkincareModal(item = null, defaultTiming = 'morning') {
       subfieldDays.classList.remove('visible');
       subfieldFreq.classList.remove('visible');
     }
+
+    // Expiration details
+    document.getElementById('skincare-opened-date').value = item.openedDate || '';
+    document.getElementById('skincare-pao').value = item.paoMonths || '';
+    document.getElementById('skincare-exp-date').value = item.expirationDate || '';
 
     // Days
     if (item.scheduleType === 'days' && item.scheduleDays) {
@@ -1245,6 +1435,10 @@ formSkincare.addEventListener('submit', (e) => {
   }
 
   const targetFrequency = parseInt(document.getElementById('skincare-freq-num').value) || 3;
+  const openedDate = document.getElementById('skincare-opened-date').value || undefined;
+  const paoMonthsInput = document.getElementById('skincare-pao').value;
+  const paoMonths = paoMonthsInput !== '' ? parseInt(paoMonthsInput) : undefined;
+  const expirationDate = document.getElementById('skincare-exp-date').value || undefined;
 
   if (id) {
     // Update existing
@@ -1255,6 +1449,9 @@ formSkincare.addEventListener('submit', (e) => {
       item.scheduleType = scheduleType;
       item.scheduleDays = scheduleType === 'days' ? scheduleDays : undefined;
       item.targetFrequency = scheduleType === 'frequency' ? targetFrequency : undefined;
+      item.openedDate = openedDate;
+      item.paoMonths = paoMonths;
+      item.expirationDate = expirationDate;
     }
   } else {
     // Create new
@@ -1267,7 +1464,10 @@ formSkincare.addEventListener('submit', (e) => {
       scheduleDays: scheduleType === 'days' ? scheduleDays : undefined,
       targetFrequency: scheduleType === 'frequency' ? targetFrequency : undefined,
       currentWeekCount: 0,
-      history: {}
+      history: {},
+      openedDate,
+      paoMonths,
+      expirationDate
     });
   }
 
