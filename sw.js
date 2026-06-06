@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ritual-v10';
+const CACHE_NAME = 'ritual-v11';
 const ASSETS = [
   './',
   './index.html',
