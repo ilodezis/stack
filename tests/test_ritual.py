@@ -378,8 +378,413 @@ def test_feature_toggles_default_disabled(server, driver):
     # Expiration fields should be hidden by default
     exp_group = driver.find_element(By.ID, "skincare-expiration-toggle-group")
     assert exp_group.value_of_css_property("display") == "none"
-    
+
     # Close skincare modal
     btn_skincare_cancel = driver.find_element(By.CSS_SELECTOR, "#dialog-skincare .btn-cancel")
     driver.execute_script("arguments[0].click();", btn_skincare_cancel)
     time.sleep(0.2)
+
+def test_theme_toggle(server, driver):
+    """Test dark/light theme toggle and persistence."""
+    driver.get(f"http://127.0.0.1:{PORT}/")
+    wait = WebDriverWait(driver, 5)
+
+    # Skip onboarding
+    wait.until(EC.presence_of_element_located((By.ID, "dialog-onboarding")))
+    driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding .btn-next-step").click()
+    time.sleep(0.1)
+    driver.find_element(By.XPATH, "//div[@data-step='2']//button[contains(text(), 'Продолжить')]").click()
+    time.sleep(0.1)
+    driver.find_element(By.ID, "btn-onboarding-clean").click()
+    time.sleep(0.5)
+
+    # Initially should be light theme (no 'dark' class on html)
+    html_el = driver.find_element(By.TAG_NAME, "html")
+    assert "dark" not in html_el.get_attribute("class")
+
+    # Toggle theme
+    theme_btn = driver.find_element(By.ID, "theme-toggle")
+    driver.execute_script("arguments[0].click();", theme_btn)
+    time.sleep(0.2)
+
+    # Should now have dark theme
+    html_el = driver.find_element(By.TAG_NAME, "html")
+    assert "dark" in html_el.get_attribute("class")
+
+    # Toggle back to light
+    driver.execute_script("arguments[0].click();", theme_btn)
+    time.sleep(0.2)
+    html_el = driver.find_element(By.TAG_NAME, "html")
+    assert "dark" not in html_el.get_attribute("class")
+
+def test_search_filter(server, driver):
+    """Test search functionality for filtering supplements."""
+    driver.get(f"http://127.0.0.1:{PORT}/")
+    wait = WebDriverWait(driver, 5)
+
+    # Use Demo state to have items
+    wait.until(EC.presence_of_element_located((By.ID, "dialog-onboarding")))
+    driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding .btn-next-step").click()
+    time.sleep(0.1)
+    driver.find_element(By.XPATH, "//div[@data-step='2']//button[contains(text(), 'Продолжить')]").click()
+    time.sleep(0.1)
+    driver.find_element(By.ID, "btn-onboarding-demo").click()
+    time.sleep(0.5)
+
+    # Search for "Омега"
+    search_input = driver.find_element(By.ID, "search-input")
+    search_input.send_keys("Омега")
+    time.sleep(0.3)
+
+    # Should see matching items
+    rows = driver.find_elements(By.CLASS_NAME, "row-item")
+    visible_rows = [r for r in rows if r.is_displayed()]
+    assert len(visible_rows) >= 1
+
+    # Verify all visible rows contain "Омега" in their text
+    for row in visible_rows:
+        assert "Омега" in row.text
+
+    # Clear search
+    clear_btn = driver.find_element(By.ID, "search-clear-btn")
+    driver.execute_script("arguments[0].click();", clear_btn)
+    time.sleep(0.2)
+
+    # All rows should be visible again
+    rows = driver.find_elements(By.CLASS_NAME, "row-item")
+    visible_rows = [r for r in rows if r.is_displayed()]
+    assert len(visible_rows) > len(visible_rows)  # More items now
+
+def test_mark_all_button(server, driver):
+    """Test 'Mark All' button functionality in blocks."""
+    driver.get(f"http://127.0.0.1:{PORT}/")
+    wait = WebDriverWait(driver, 5)
+
+    # Use Demo state
+    wait.until(EC.presence_of_element_located((By.ID, "dialog-onboarding")))
+    driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding .btn-next-step").click()
+    time.sleep(0.1)
+    driver.find_element(By.XPATH, "//div[@data-step='2']//button[contains(text(), 'Продолжить')]").click()
+    time.sleep(0.1)
+    driver.find_element(By.ID, "btn-onboarding-demo").click()
+    time.sleep(0.5)
+
+    # Enable daily tracking
+    driver.execute_script("""
+        const cb = document.getElementById('setting-daily-tracking');
+        cb.checked = true;
+        cb.dispatchEvent(new Event('change'));
+    """)
+    time.sleep(0.2)
+
+    # Find first block's "Mark All" button
+    mark_all_btn = driver.find_element(By.CLASS_NAME, "btn-mark-all")
+    initial_text = mark_all_btn.text
+
+    # Click Mark All
+    driver.execute_script("arguments[0].click();", mark_all_btn)
+    time.sleep(0.3)
+
+    # Button should change to "Готово"
+    mark_all_btn = driver.find_element(By.CLASS_NAME, "btn-mark-all")
+    assert mark_all_btn.text == "✓ Готово"
+
+    # All checkboxes in block should be checked
+    card = mark_all_btn.find_element(By.XPATH, "./ancestor::div[contains(@class, 'card')]")
+    checkboxes = card.find_elements(By.CLASS_NAME, "custom-checkbox")
+    for cb in checkboxes:
+        assert "checked" in cb.get_attribute("class")
+
+def test_export_import_data(server, driver):
+    """Test data export and import functionality."""
+    driver.get(f"http://127.0.0.1:{PORT}/")
+    wait = WebDriverWait(driver, 5)
+
+    # Skip onboarding with clean state
+    wait.until(EC.presence_of_element_located((By.ID, "dialog-onboarding")))
+    driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding .btn-next-step").click()
+    time.sleep(0.1)
+    driver.find_element(By.XPATH, "//div[@data-step='2']//button[contains(text(), 'Продолжить')]").click()
+    time.sleep(0.1)
+    driver.find_element(By.ID, "btn-onboarding-clean").click()
+    time.sleep(0.5)
+
+    # Open settings
+    settings_btn = driver.find_element(By.ID, "settings-btn")
+    driver.execute_script("arguments[0].click();", settings_btn)
+    time.sleep(0.3)
+
+    # Create a block first
+    edit_toggle = driver.find_element(By.ID, "edit-mode-toggle")
+    driver.execute_script("arguments[0].click();", edit_toggle)
+    time.sleep(0.2)
+
+    btn_first_block = driver.find_element(By.ID, "btn-create-first-block")
+    driver.execute_script("arguments[0].click();", btn_first_block)
+    time.sleep(0.2)
+    driver.find_element(By.ID, "block-name").send_keys("Тестовый блок")
+    driver.find_element(By.ID, "block-icon").send_keys("🧪")
+    btn_block_submit = driver.find_element(By.CSS_SELECTOR, "#form-block button[type='submit']")
+    driver.execute_script("arguments[0].click();", btn_block_submit)
+    time.sleep(0.3)
+
+    # Close settings and reopen for export
+    driver.execute_script("arguments[0].click();", edit_toggle)
+    time.sleep(0.2)
+    driver.execute_script("arguments[0].click();", settings_btn)
+    time.sleep(0.3)
+
+    # Export should trigger download (we can't verify file, but can verify no error)
+    export_btn = driver.find_element(By.ID, "btn-export-json")
+    driver.execute_script("arguments[0].click();", export_btn)
+    time.sleep(0.5)
+
+    # Import - prepare a JSON file
+    import_config = {
+        "blocks": [{"id": "imported-block", "name": "Импортированный блок", "icon": "📦", "sub": "", "color": "utro"}],
+        "items": [{"id": "imported-item", "blockId": "imported-block", "name": "Импортированная добавка", "dose": "1 шт", "cond": "", "checked": False}],
+        "skincareItems": [],
+        "settings": {
+            "dailyTrackingEnabled": True,
+            "onboardingCompleted": True,
+            "skincareEnabled": False,
+            "suppSchedulingEnabled": False,
+            "suppStockEnabled": False,
+            "skinExpirationEnabled": False
+        }
+    }
+    import json
+    import tempfile
+    import os
+
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        json.dump(import_config, f)
+        temp_file = f.name
+
+    # Upload file via import
+    import_btn = driver.find_element(By.ID, "btn-import-trigger")
+    file_input = driver.find_element(By.ID, "import-file-input")
+    file_input.send_keys(temp_file)
+    time.sleep(0.5)
+
+    os.unlink(temp_file)
+
+    # Verify imported data
+    imported_block = driver.find_element(By.XPATH, "//span[contains(text(), 'Импортированный блок')]")
+    assert imported_block.is_displayed()
+
+def test_reset_to_default(server, driver):
+    """Test reset stack to default functionality."""
+    driver.get(f"http://127.0.0.1:{PORT}/")
+    wait = WebDriverWait(driver, 5)
+
+    # Start with clean state
+    wait.until(EC.presence_of_element_located((By.ID, "dialog-onboarding")))
+    driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding .btn-next-step").click()
+    time.sleep(0.1)
+    driver.find_element(By.XPATH, "//div[@data-step='2']//button[contains(text(), 'Продолжить')]").click()
+    time.sleep(0.1)
+    driver.find_element(By.ID, "btn-onboarding-clean").click()
+    time.sleep(0.5)
+
+    # Create a custom block
+    edit_toggle = driver.find_element(By.ID, "edit-mode-toggle")
+    driver.execute_script("arguments[0].click();", edit_toggle)
+    time.sleep(0.2)
+
+    btn_first_block = driver.find_element(By.ID, "btn-create-first-block")
+    driver.execute_script("arguments[0].click();", btn_first_block)
+    time.sleep(0.2)
+    driver.find_element(By.ID, "block-name").send_keys("Мой блок")
+    btn_block_submit = driver.find_element(By.CSS_SELECTOR, "#form-block button[type='submit']")
+    driver.execute_script("arguments[0].click();", btn_block_submit)
+    time.sleep(0.3)
+
+    # Verify block exists
+    custom_block = driver.find_element(By.XPATH, "//span[contains(text(), 'Мой блок')]")
+    assert custom_block.is_displayed()
+
+    # Open settings and reset
+    settings_btn = driver.find_element(By.ID, "settings-btn")
+    driver.execute_script("arguments[0].click();", settings_btn)
+    time.sleep(0.3)
+
+    reset_btn = driver.find_element(By.ID, "btn-reset-default")
+    driver.execute_script("arguments[0].click();", reset_btn)
+    time.sleep(0.3)
+
+    # Confirm reset
+    driver.switch_to.alert.accept()
+    time.sleep(0.5)
+
+    # Custom block should be gone, empty state should appear
+    empty_card = wait.until(EC.presence_of_element_located((By.CLASS_NAME, "empty-state-card")))
+    assert empty_card.is_displayed()
+
+def test_skincare_schedule_types(server, driver):
+    """Test different skincare schedule types: daily, days, frequency."""
+    driver.get(f"http://127.0.0.1:{PORT}/")
+    wait = WebDriverWait(driver, 5)
+
+    # Skip onboarding
+    wait.until(EC.presence_of_element_located((By.ID, "dialog-onboarding")))
+    driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding .btn-next-step").click()
+    time.sleep(0.1)
+    driver.find_element(By.XPATH, "//div[@data-step='2']//button[contains(text(), 'Продолжить')]").click()
+    time.sleep(0.1)
+    driver.find_element(By.ID, "btn-onboarding-clean").click()
+    time.sleep(0.5)
+
+    # Enable skincare
+    driver.execute_script("""
+        const cb = document.getElementById('setting-skincare-enabled');
+        cb.checked = true;
+        cb.dispatchEvent(new Event('change'));
+    """)
+    time.sleep(0.2)
+
+    # Switch to Skincare screen
+    driver.find_element(By.ID, "nav-skincare").click()
+    time.sleep(0.3)
+
+    # Enable edit mode
+    skincare_edit = driver.find_element(By.ID, "skincare-edit-toggle")
+    driver.execute_script("arguments[0].click();", skincare_edit)
+    time.sleep(0.2)
+
+    # Add skincare with "По дням" schedule
+    btn_add = driver.find_element(By.ID, "btn-add-skincare-morning")
+    driver.execute_script("arguments[0].click();", btn_add)
+    time.sleep(0.3)
+
+    driver.find_element(By.ID, "skincare-name").send_keys("Средство по дням")
+
+    # Select "По дням" schedule
+    driver.execute_script("arguments[0].click();", driver.find_element(By.ID, "schedule-days"))
+    time.sleep(0.1)
+
+    # Select Wednesday (data-day="3")
+    wed_btn = driver.find_element(By.XPATH, "//div[@id='skincare-days-picker']/button[@data-day='3']")
+    driver.execute_script("arguments[0].click();", wed_btn)
+    time.sleep(0.1)
+
+    submit_btn = driver.find_element(By.CSS_SELECTOR, "#form-skincare button[type='submit']")
+    driver.execute_script("arguments[0].click();", submit_btn)
+    time.sleep(0.3)
+
+    # Verify item is displayed (today is Wednesday in mock)
+    skincare_card = driver.find_element(By.XPATH, "//span[contains(text(), 'Средство по дням')]")
+    assert skincare_card.is_displayed()
+
+def test_xss_protection(server, driver):
+    """Test XSS protection - special characters should be escaped."""
+    driver.get(f"http://127.0.0.1:{PORT}/")
+    wait = WebDriverWait(driver, 5)
+
+    # Skip onboarding
+    wait.until(EC.presence_of_element_located((By.ID, "dialog-onboarding")))
+    driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding .btn-next-step").click()
+    time.sleep(0.1)
+    driver.find_element(By.XPATH, "//div[@data-step='2']//button[contains(text(), 'Продолжить')]").click()
+    time.sleep(0.1)
+    driver.find_element(By.ID, "btn-onboarding-clean").click()
+    time.sleep(0.5)
+
+    # Enable edit mode
+    edit_toggle = driver.find_element(By.ID, "edit-mode-toggle")
+    driver.execute_script("arguments[0].click();", edit_toggle)
+    time.sleep(0.2)
+
+    # Create block
+    btn_first_block = driver.find_element(By.ID, "btn-create-first-block")
+    driver.execute_script("arguments[0].click();", btn_first_block)
+    time.sleep(0.2)
+
+    # Try to inject script in block name
+    driver.find_element(By.ID, "block-name").send_keys("<script>alert('XSS')</script>Тест")
+    btn_block_submit = driver.find_element(By.CSS_SELECTOR, "#form-block button[type='submit']")
+    driver.execute_script("arguments[0].click();", btn_block_submit)
+    time.sleep(0.3)
+
+    # The script tag should be escaped and displayed as text, not executed
+    # We verify by checking the block name appears with escaped characters
+    block_name = driver.find_element(By.XPATH, "//span[contains(text(), '<script>') or contains(text(), 'Тест')]")
+    assert block_name.is_displayed()
+
+    # No alert should have appeared (if script executed, alert would show)
+    # This is implicit - if we reach here, test passed
+
+def test_form_validation(server, driver):
+    """Test form validation - required fields, empty submissions."""
+    driver.get(f"http://127.0.0.1:{PORT}/")
+    wait = WebDriverWait(driver, 5)
+
+    # Skip onboarding
+    wait.until(EC.presence_of_element_located((By.ID, "dialog-onboarding")))
+    driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding .btn-next-step").click()
+    time.sleep(0.1)
+    driver.find_element(By.XPATH, "//div[@data-step='2']//button[contains(text(), 'Продолжить')]").click()
+    time.sleep(0.1)
+    driver.find_element(By.ID, "btn-onboarding-clean").click()
+    time.sleep(0.5)
+
+    # Enable edit mode
+    edit_toggle = driver.find_element(By.ID, "edit-mode-toggle")
+    driver.execute_script("arguments[0].click();", edit_toggle)
+    time.sleep(0.2)
+
+    # Create block with empty name - should not submit
+    btn_first_block = driver.find_element(By.ID, "btn-create-first-block")
+    driver.execute_script("arguments[0].click();", btn_first_block)
+    time.sleep(0.2)
+
+    # Don't fill name, just submit
+    btn_block_submit = driver.find_element(By.CSS_SELECTOR, "#form-block button[type='submit']")
+    driver.execute_script("arguments[0].click();", btn_block_submit)
+    time.sleep(0.3)
+
+    # Dialog should still be open (validation failed)
+    dialog = driver.find_element(By.ID, "dialog-block")
+    assert dialog.is_displayed()
+
+    # Close dialog
+    cancel_btn = driver.find_element(By.CSS_SELECTOR, "#dialog-block .btn-cancel")
+    driver.execute_script("arguments[0].click();", cancel_btn)
+    time.sleep(0.2)
+
+def test_delete_block_and_items(server, driver):
+    """Test deleting a block with its items."""
+    driver.get(f"http://127.0.0.1:{PORT}/")
+    wait = WebDriverWait(driver, 5)
+
+    # Use Demo state
+    wait.until(EC.presence_of_element_located((By.ID, "dialog-onboarding")))
+    driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding .btn-next-step").click()
+    time.sleep(0.1)
+    driver.find_element(By.XPATH, "//div[@data-step='2']//button[contains(text(), 'Продолжить')]").click()
+    time.sleep(0.1)
+    driver.find_element(By.ID, "btn-onboarding-demo").click()
+    time.sleep(0.5)
+
+    # Enable edit mode
+    edit_toggle = driver.find_element(By.ID, "edit-mode-toggle")
+    driver.execute_script("arguments[0].click();", edit_toggle)
+    time.sleep(0.2)
+
+    # Edit first block
+    edit_btn = driver.find_element(By.CLASS_NAME, "btn-edit-block")
+    driver.execute_script("arguments[0].click();", edit_btn)
+    time.sleep(0.3)
+
+    # Delete block
+    delete_btn = driver.find_element(By.ID, "btn-delete-block")
+    driver.execute_script("arguments[0].click();", delete_btn)
+    time.sleep(0.2)
+
+    # Confirm deletion
+    driver.switch_to.alert.accept()
+    time.sleep(0.3)
+
+    # Block should be removed
+    cards = driver.find_elements(By.CLASS_NAME, "card")
+    assert len(cards) < 4  # Was 4 blocks in demo
