@@ -16,9 +16,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   
   <!-- Icons -->
-  <link rel="apple-touch-icon" href="icon.png?v=5">
-  <link rel="icon" type="image/png" href="icon.png?v=5">
-  <link rel="manifest" href="manifest.json?v=5">
+  <link rel="apple-touch-icon" href="icon.png?v=12">
+  <link rel="icon" type="image/png" href="icon.png?v=12">
+  <link rel="manifest" href="manifest.json?v=12">
   
   <!-- Styles -->
   <link rel="stylesheet" href="css/app.css">
@@ -373,6 +373,16 @@
             <input type="file" id="import-file-input" accept=".json" style="display: none;">
           </div>
         </div>
+
+        <div class="setting-item border-top">
+          <div class="setting-info">
+            <div class="setting-title">Восстановление из бэкапа</div>
+            <div class="setting-description">Восстановить данные из последней резервной копии (перед импортом).</div>
+          </div>
+          <div class="setting-actions">
+            <button type="button" id="btn-restore-backup" class="btn-action btn-secondary">Восстановить</button>
+          </div>
+        </div>
         
         <div class="setting-item border-top">
           <div class="setting-info">
@@ -386,7 +396,7 @@
         
         <div class="setting-item border-top developer-credits">
           <p>Разработано с заботой о здоровье 🌱</p>
-          <p class="credits-version">Версия 2.0 (PWA)</p>
+          <p class="credits-version">Версия 2.1 (PWA)</p>
         </div>
       </div>
       <div class="modal-footer">

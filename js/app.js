@@ -1,5 +1,17 @@
 import Sortable from 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/modular/sortable.esm.js';
 
+// --- XSS PROTECTION ---
+// Экранирует HTML-спецсимволы для защиты от XSS-атак
+function escapeHTML(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// Day labels for schedule badges (0=Sun, 1=Mon, ..., 6=Sat)
+const DAY_LABELS = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+
 // --- STATE MANAGEMENT ---
 let state = {
   blocks: [],
@@ -344,231 +356,259 @@ function renderDate() {
   headerDate.textContent = capitalizedDateStr;
 }
 
+// --- RENDER HELPERS ---
+
+// Render empty state when no blocks exist
+function renderEmptyState() {
+  const emptyCard = document.createElement('div');
+  emptyCard.className = 'empty-state-card';
+  emptyCard.innerHTML = `
+    <div class="empty-state-illustration">🌱</div>
+    <h3 class="empty-state-title">Ритуалы ещё не добавлены</h3>
+    <p class="empty-state-text">Создайте первый блок — например «Утро», «День» или «Вечер» — и добавьте витамины или добавки.</p>
+    <button id="btn-create-first-block" class="btn-action btn-primary btn-empty-state">
+      Создать первый блок
+    </button>
+  `;
+
+  emptyCard.querySelector('#btn-create-first-block').addEventListener('click', () => {
+    if (!editMode) {
+      editModeToggle.click();
+    }
+    openBlockModal(null);
+  });
+
+  stacksGrid.appendChild(emptyCard);
+  stacksGrid.style.display = 'block';
+}
+
+// Build schedule badge HTML
+function buildScheduleBadge(item) {
+  if (!state.settings.suppSchedulingEnabled || item.scheduleType !== 'days' || !item.scheduleDays || item.scheduleDays.length === 0) {
+    return '';
+  }
+  const dayLabels = item.scheduleDays.map(d => DAY_LABELS[d]).join(', ');
+  return `<span class="row-schedule-badge">📅 ${dayLabels}</span>`;
+}
+
+// Build stock badge HTML
+function buildStockBadge(item) {
+  if (!state.settings.suppStockEnabled || item.stockTotal === undefined || item.stockTotal === null || item.stockTotal === '') {
+    return '';
+  }
+  const total = parseInt(item.stockTotal);
+  const take = parseInt(item.stockTake) || 1;
+  if (total <= 10 || total <= take * 5) {
+    return `<span class="stock-warning-badge">Осталось: ${total}</span>`;
+  }
+  return '';
+}
+
+// Render single item row
+function renderItemRow(item, isScheduledToday) {
+  const row = document.createElement('div');
+  const isItemChecked = state.settings.dailyTrackingEnabled && item.checked;
+  let rowClasses = ['row-item'];
+  if (isItemChecked) rowClasses.push('checked');
+  if (!isScheduledToday && editMode) rowClasses.push('not-today');
+  row.className = rowClasses.join(' ');
+  row.dataset.id = item.id;
+
+  // Perform search filter if active
+  if (searchQuery) {
+    const matches = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!matches) {
+      row.style.display = 'none';
+    }
+  }
+
+  const scheduleBadge = buildScheduleBadge(item);
+  const stockBadge = buildStockBadge(item);
+
+  row.innerHTML = `
+    <div class="row-item-left">
+      <div class="custom-checkbox ${isItemChecked ? 'checked' : ''}" style="display: ${state.settings.dailyTrackingEnabled ? 'flex' : 'none'};" role="checkbox" aria-checked="${isItemChecked}"></div>
+      <div class="row-content">
+        <span class="row-name">${escapeHTML(item.name)}</span>
+        <div class="row-meta">
+          ${item.cond ? `<span class="row-cond">${escapeHTML(item.cond)}</span>` : ''}
+          ${scheduleBadge}
+        </div>
+      </div>
+    </div>
+    <span class="dose-tag">${escapeHTML(item.dose)}</span>
+    ${stockBadge}
+    <div class="row-edit-actions">
+      <button class="btn-card-action btn-edit-item" title="Редактировать">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      </button>
+      <div class="btn-card-action item-drag-handle" title="Перетащить">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+      </div>
+    </div>
+  `;
+
+  // Checkbox Click event
+  const checkbox = row.querySelector('.custom-checkbox');
+  checkbox.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!state.settings.dailyTrackingEnabled) return;
+    item.checked = !item.checked;
+
+    // Stock decrement/increment logic
+    if (state.settings.suppStockEnabled && item.stockTotal !== undefined && item.stockTotal !== null && item.stockTotal !== '') {
+      const take = parseInt(item.stockTake) || 1;
+      const totalVal = parseInt(item.stockTotal);
+      if (item.checked) {
+        item.stockTotal = Math.max(0, totalVal - take);
+      } else {
+        item.stockTotal = totalVal + take;
+      }
+    }
+
+    saveState();
+    renderApp();
+  });
+
+  // Row click to toggle checkbox (except in edit mode)
+  row.addEventListener('click', () => {
+    if (!editMode && state.settings.dailyTrackingEnabled) {
+      checkbox.click();
+    }
+  });
+
+  // Edit supplement event
+  row.querySelector('.btn-edit-item').addEventListener('click', (e) => {
+    e.stopPropagation();
+    openItemModal(item);
+  });
+
+  return row;
+}
+
+// Render single block card
+function renderBlockCard(block) {
+  const blockItems = state.items.filter(item => item.blockId === block.id);
+  const card = document.createElement('div');
+  card.className = `card ${block.color || 'utro'}`;
+  card.dataset.id = block.id;
+
+  card.innerHTML = `
+    <div class="card-header">
+      <div class="card-header-left">
+        <div class="card-ico">${escapeHTML(block.icon) || '💊'}</div>
+        <div class="card-titles">
+          <span class="card-label">${escapeHTML(block.name)}</span>
+          ${block.sub ? `<span class="card-sub">${escapeHTML(block.sub)}</span>` : ''}
+        </div>
+      </div>
+      <div class="card-header-right">
+        <button class="btn-mark-all" data-block-id="${escapeHTML(block.id)}" title="Отметить все">✓ Все</button>
+        <button class="btn-card-action btn-edit-block" title="Редактировать блок" style="display: ${editMode ? 'flex' : 'none'};">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        </button>
+        <div class="btn-card-action block-drag-handle" title="Перетащить блок" style="display: ${editMode ? 'flex' : 'none'};">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+        </div>
+      </div>
+    </div>
+    <div class="rows-container" data-block-id="${escapeHTML(block.id)}"></div>
+    <button class="add-item-card-btn" data-block-id="${escapeHTML(block.id)}">
+      <span>+ Добавить добавку</span>
+    </button>
+  `;
+
+  const rowsContainer = card.querySelector('.rows-container');
+
+  // Add Row Items
+  blockItems.forEach(item => {
+    const isScheduledToday = isScheduledForToday(item);
+    if (!isScheduledToday && !editMode) {
+      return;
+    }
+    const row = renderItemRow(item, isScheduledToday);
+    rowsContainer.appendChild(row);
+  });
+
+  // Mark-all button logic
+  setupMarkAllButton(card, blockItems);
+
+  // Edit block event
+  card.querySelector('.btn-edit-block').addEventListener('click', (e) => {
+    e.stopPropagation();
+    openBlockModal(block);
+  });
+
+  // Add supplement item inside block event
+  card.querySelector('.add-item-card-btn').addEventListener('click', (e) => {
+    openItemModal(null, block.id);
+  });
+
+  return card;
+}
+
+// Setup mark-all button for a block
+function setupMarkAllButton(card, blockItems) {
+  const markAllBtn = card.querySelector('.btn-mark-all');
+  const todayBlockItems = blockItems.filter(i => isScheduledForToday(i));
+
+  const updateMarkAllState = () => {
+    const allDone = todayBlockItems.length > 0 && todayBlockItems.every(i => i.checked);
+    markAllBtn.classList.toggle('all-done', allDone);
+    markAllBtn.textContent = allDone ? '✓ Готово' : '✓ Все';
+
+    if (todayBlockItems.length === 0) {
+      markAllBtn.style.display = 'none';
+    } else {
+      markAllBtn.style.display = '';
+    }
+  };
+  updateMarkAllState();
+  
+  markAllBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!state.settings.dailyTrackingEnabled) return;
+    const allDone = todayBlockItems.every(i => i.checked);
+
+    todayBlockItems.forEach(i => {
+      const wasChecked = i.checked;
+      i.checked = !allDone;
+
+      // Apply stock adjustment on toggle
+      if (state.settings.suppStockEnabled && i.stockTotal !== undefined && i.stockTotal !== null && i.stockTotal !== '') {
+        const take = parseInt(i.stockTake) || 1;
+        const totalVal = parseInt(i.stockTotal);
+        if (i.checked && !wasChecked) {
+          i.stockTotal = Math.max(0, totalVal - take);
+        } else if (!i.checked && wasChecked) {
+          i.stockTotal = totalVal + take;
+        }
+      }
+    });
+
+    saveState();
+    renderApp();
+  });
+}
+
 // --- RENDER APPLICATION ---
 function renderApp() {
   stacksGrid.innerHTML = '';
   renderDate();
-  
+
   if (state.blocks.length === 0) {
-    const emptyCard = document.createElement('div');
-    emptyCard.className = 'empty-state-card';
-    emptyCard.innerHTML = `
-      <div class="empty-state-illustration">🌱</div>
-      <h3 class="empty-state-title">Ритуалы ещё не добавлены</h3>
-      <p class="empty-state-text">Создайте первый блок — например «Утро», «День» или «Вечер» — и добавьте витамины или добавки.</p>
-      <button id="btn-create-first-block" class="btn-action btn-primary btn-empty-state">
-        Создать первый блок
-      </button>
-    `;
-    
-    emptyCard.querySelector('#btn-create-first-block').addEventListener('click', () => {
-      if (!editMode) {
-        editModeToggle.click();
-      }
-      openBlockModal(null);
-    });
-    
-    stacksGrid.appendChild(emptyCard);
-    stacksGrid.style.display = 'block';
+    renderEmptyState();
   } else {
     stacksGrid.style.display = '';
     state.blocks.forEach(block => {
-    // Filter items belonging to this block
-    const blockItems = state.items.filter(item => item.blockId === block.id);
-    
-    // Card Wrapper
-    const card = document.createElement('div');
-    card.className = `card ${block.color || 'utro'}`;
-    card.dataset.id = block.id;
-    
-    // Header
-    card.innerHTML = `
-      <div class="card-header">
-        <div class="card-header-left">
-          <div class="card-ico">${block.icon || '💊'}</div>
-          <div class="card-titles">
-            <span class="card-label">${block.name}</span>
-            ${block.sub ? `<span class="card-sub">${block.sub}</span>` : ''}
-          </div>
-        </div>
-        <div class="card-header-right">
-          <button class="btn-mark-all" data-block-id="${block.id}" title="Отметить все">✓ Все</button>
-          <button class="btn-card-action btn-edit-block" title="Редактировать блок" style="display: ${editMode ? 'flex' : 'none'};">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-          </button>
-          <div class="btn-card-action block-drag-handle" title="Перетащить блок" style="display: ${editMode ? 'flex' : 'none'};">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
-          </div>
-        </div>
-      </div>
-      <div class="rows-container" data-block-id="${block.id}"></div>
-      <button class="add-item-card-btn" data-block-id="${block.id}">
-        <span>+ Добавить добавку</span>
-      </button>
-    `;
-    
-    const rowsContainer = card.querySelector('.rows-container');
-    
-    // Add Row Items
-    blockItems.forEach(item => {
-      const isScheduledToday = isScheduledForToday(item);
-      
-      // Perform schedule filter
-      if (!isScheduledToday && !editMode) {
-        return; // Skip rendering
-      }
-      
-      const row = document.createElement('div');
-      const isItemChecked = state.settings.dailyTrackingEnabled && item.checked;
-      let rowClasses = ['row-item'];
-      if (isItemChecked) rowClasses.push('checked');
-      if (!isScheduledToday && editMode) rowClasses.push('not-today');
-      row.className = rowClasses.join(' ');
-      row.dataset.id = item.id;
-      
-      // Perform search filter if active
-      if (searchQuery) {
-        const matches = item.name.toLowerCase().includes(searchQuery.toLowerCase());
-        if (!matches) {
-          row.style.display = 'none';
-        }
-      }
-      
-      let scheduleBadge = '';
-      if (state.settings.suppSchedulingEnabled && item.scheduleType === 'days' && item.scheduleDays && item.scheduleDays.length > 0) {
-        const dayLabels = item.scheduleDays.map(d => DAY_LABELS[d]).join(', ');
-        scheduleBadge = `<span class="row-schedule-badge">📅 ${dayLabels}</span>`;
-      }
-      
-      let stockBadge = '';
-      if (state.settings.suppStockEnabled && item.stockTotal !== undefined && item.stockTotal !== null && item.stockTotal !== '') {
-        const total = parseInt(item.stockTotal);
-        const take = parseInt(item.stockTake) || 1;
-        if (total <= 10 || total <= take * 5) {
-          stockBadge = `<span class="stock-warning-badge">Осталось: ${total}</span>`;
-        }
-      }
-      
-      row.innerHTML = `
-        <div class="row-item-left">
-          <div class="custom-checkbox ${isItemChecked ? 'checked' : ''}" style="display: ${state.settings.dailyTrackingEnabled ? 'flex' : 'none'};" role="checkbox" aria-checked="${isItemChecked}"></div>
-          <div class="row-content">
-            <span class="row-name">${item.name}</span>
-            <div class="row-meta">
-              ${item.cond ? `<span class="row-cond">${item.cond}</span>` : ''}
-              ${scheduleBadge}
-            </div>
-          </div>
-        </div>
-        <span class="dose-tag">${item.dose}</span>
-        ${stockBadge}
-        <div class="row-edit-actions">
-          <button class="btn-card-action btn-edit-item" title="Редактировать">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-          </button>
-          <div class="btn-card-action item-drag-handle" title="Перетащить">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
-          </div>
-        </div>
-      `;
-      
-      // Checkbox Click event
-      const checkbox = row.querySelector('.custom-checkbox');
-      checkbox.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (!state.settings.dailyTrackingEnabled) return;
-        item.checked = !item.checked;
-        
-        // Stock decrement/increment logic
-        if (state.settings.suppStockEnabled && item.stockTotal !== undefined && item.stockTotal !== null && item.stockTotal !== '') {
-          const take = parseInt(item.stockTake) || 1;
-          const totalVal = parseInt(item.stockTotal);
-          if (item.checked) {
-            item.stockTotal = Math.max(0, totalVal - take);
-          } else {
-            item.stockTotal = totalVal + take;
-          }
-        }
-        
-        saveState();
-        renderApp();
-      });
-      
-      // Row click to toggle checkbox (except in edit mode)
-      row.addEventListener('click', () => {
-        if (!editMode && state.settings.dailyTrackingEnabled) {
-          checkbox.click();
-        }
-      });
-      
-      // Edit supplement event
-      row.querySelector('.btn-edit-item').addEventListener('click', (e) => {
-        e.stopPropagation();
-        openItemModal(item);
-      });
-      
-      rowsContainer.appendChild(row);
+      const card = renderBlockCard(block);
+      stacksGrid.appendChild(card);
     });
-    
-    // Mark-all button logic
-    const markAllBtn = card.querySelector('.btn-mark-all');
-    const todayBlockItems = blockItems.filter(i => isScheduledForToday(i));
-    
-    const updateMarkAllState = () => {
-      const allDone = todayBlockItems.length > 0 && todayBlockItems.every(i => i.checked);
-      markAllBtn.classList.toggle('all-done', allDone);
-      markAllBtn.textContent = allDone ? '✓ Готово' : '✓ Все';
-      
-      if (todayBlockItems.length === 0) {
-        markAllBtn.style.display = 'none';
-      } else {
-        markAllBtn.style.display = '';
-      }
-    };
-    updateMarkAllState();
-    markAllBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (!state.settings.dailyTrackingEnabled) return;
-      const allDone = todayBlockItems.every(i => i.checked);
-      
-      todayBlockItems.forEach(i => {
-        const wasChecked = i.checked;
-        i.checked = !allDone;
-        
-        // Apply stock adjustment on toggle
-        if (state.settings.suppStockEnabled && i.stockTotal !== undefined && i.stockTotal !== null && i.stockTotal !== '') {
-          const take = parseInt(i.stockTake) || 1;
-          const totalVal = parseInt(i.stockTotal);
-          if (i.checked && !wasChecked) {
-            i.stockTotal = Math.max(0, totalVal - take);
-          } else if (!i.checked && wasChecked) {
-            i.stockTotal = totalVal + take;
-          }
-        }
-      });
-      
-      saveState();
-      renderApp();
-    });
+  }
 
-    // Edit block event
-    card.querySelector('.btn-edit-block').addEventListener('click', (e) => {
-      e.stopPropagation();
-      openBlockModal(block);
-    });
-    
-    // Add supplement item inside block event
-    card.querySelector('.add-item-card-btn').addEventListener('click', (e) => {
-      openItemModal(null, block.id);
-    });
-    
-    stacksGrid.appendChild(card);
-  });
-  } // End of state.blocks.length === 0 else block
-  
   renderProgressBar();
   updateResetFABVisibility();
-  
+
   // Sync daily-tracking-on class for mark-all CSS visibility
   document.body.classList.toggle('daily-tracking-on', state.settings.dailyTrackingEnabled);
 
@@ -993,12 +1033,15 @@ importTrigger.addEventListener('click', () => {
 importFileInput.addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  
+
   const reader = new FileReader();
   reader.onload = (evt) => {
     try {
       const importedData = JSON.parse(evt.target.result);
       if (importedData.blocks && Array.isArray(importedData.blocks) && importedData.items && Array.isArray(importedData.items)) {
+        // СОЗДАТЬ БЭКАП ПЕРЕД ИМПОРТОМ
+        localStorage.setItem('ritual_backup_pre_import', JSON.stringify(state));
+        
         state = importedData;
         // Keep date alignment or force current
         state.lastCompletionDate = state.lastCompletionDate || getTodayString();
@@ -1018,6 +1061,28 @@ importFileInput.addEventListener('change', (e) => {
   };
   reader.readAsText(file);
   importFileInput.value = ''; // Reset file input
+});
+
+// Restore from backup
+document.getElementById('btn-restore-backup').addEventListener('click', () => {
+  const backupData = localStorage.getItem('ritual_backup_pre_import');
+  if (!backupData) {
+    showToast('Бэкап не найден');
+    return;
+  }
+  
+  if (confirm('Восстановить данные из последней резервной копии? Текущие данные будут заменены.')) {
+    try {
+      state = JSON.parse(backupData);
+      saveState();
+      renderApp();
+      renderSkincareScreen();
+      dialogSettings.close();
+      showToast('Данные восстановлены из бэкапа');
+    } catch (err) {
+      alert('Ошибка при восстановлении: ' + err.message);
+    }
+  }
 });
 
 // --- CLOSE MODALS ON CANCEL / CROSS ---
@@ -1167,7 +1232,6 @@ function initBottomNav() {
 // SKINCARE MODULE
 // ================================================================
 
-const DAY_LABELS = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 let skincareEditMode = false;
 
 // Get current day-of-week (0=Sun, 1=Mon, ..., 6=Sat)
@@ -1317,12 +1381,12 @@ function buildSkincareCard(item, timing) {
         <div class="skincare-card-name-row">
           ${(item.scheduleType === 'days' || item.scheduleType === 'daily') ? '<div class="skincare-done-circle"></div>' : ''}
           <div class="skincare-name-container">
-            <span class="skincare-card-name">${item.name}</span>
+            <span class="skincare-card-name">${escapeHTML(item.name)}</span>
             ${expiryBadgeHTML}
           </div>
         </div>
         <div class="skincare-card-actions">
-          <button class="btn-edit-skincare" data-id="${item.id}" aria-label="Редактировать">${editSVG}</button>
+          <button class="btn-edit-skincare" data-id="${escapeHTML(item.id)}" aria-label="Редактировать">${editSVG}</button>
         </div>
       </div>
       ${bottomSection}
