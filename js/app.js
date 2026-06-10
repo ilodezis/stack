@@ -926,6 +926,7 @@ formBlock.addEventListener('submit', (e) => {
   e.preventDefault();
   const id = document.getElementById('edit-block-id').value;
   const name = document.getElementById('block-name').value.trim();
+  if (!name) return;
   const icon = document.getElementById('block-icon').value.trim();
   const sub = document.getElementById('block-sub').value.trim();
   const color = formBlock.querySelector('input[name="block-color"]:checked').value;
@@ -1032,6 +1033,7 @@ formItem.addEventListener('submit', (e) => {
   const id = document.getElementById('edit-item-id').value;
   const blockId = document.getElementById('item-block-id').value;
   const name = document.getElementById('item-name').value.trim();
+  if (!name) return;
   const dose = document.getElementById('item-dose').value.trim();
   const cond = document.getElementById('item-cond').value.trim();
   
@@ -1795,6 +1797,7 @@ formSkincare.addEventListener('submit', (e) => {
   e.preventDefault();
   const id = document.getElementById('edit-skincare-id').value;
   const name = document.getElementById('skincare-name').value.trim();
+  if (!name) return;
   const timing = document.querySelector('input[name="skincare-timing"]:checked').value;
   const scheduleType = document.querySelector('input[name="skincare-schedule"]:checked').value;
 
@@ -2148,6 +2151,7 @@ formWorkout.addEventListener('submit', (e) => {
   e.preventDefault();
   const id = document.getElementById('edit-workout-id').value;
   const name = document.getElementById('workout-name').value.trim();
+  if (!name) return;
   const icon = document.getElementById('workout-icon').value.trim();
   const color = formWorkout.querySelector('input[name="workout-color"]:checked').value;
 
@@ -2265,6 +2269,7 @@ formExercise.addEventListener('submit', (e) => {
   const wId = document.getElementById('exercise-workout-id').value;
   const exId = document.getElementById('edit-exercise-id').value;
   const name = document.getElementById('exercise-name').value.trim();
+  if (!name) return;
   const notes = document.getElementById('exercise-notes').value.trim();
 
   // Compile sets

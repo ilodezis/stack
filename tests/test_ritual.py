@@ -441,7 +441,8 @@ def test_search_filter(server, driver):
     # Should see matching items
     rows = driver.find_elements(By.CLASS_NAME, "row-item")
     visible_rows = [r for r in rows if r.is_displayed()]
-    assert len(visible_rows) >= 1
+    filtered_count = len(visible_rows)
+    assert filtered_count >= 1
 
     # Verify all visible rows contain "Омега" in their text
     for row in visible_rows:
@@ -455,7 +456,7 @@ def test_search_filter(server, driver):
     # All rows should be visible again
     rows = driver.find_elements(By.CLASS_NAME, "row-item")
     visible_rows = [r for r in rows if r.is_displayed()]
-    assert len(visible_rows) > len(visible_rows)  # More items now
+    assert len(visible_rows) > filtered_count  # More items now
 
 def test_mark_all_button(server, driver):
     """Test 'Mark All' button functionality in blocks."""
@@ -525,7 +526,7 @@ def test_export_import_data(server, driver):
     driver.execute_script("arguments[0].click();", btn_first_block)
     time.sleep(0.2)
     driver.find_element(By.ID, "block-name").send_keys("Тестовый блок")
-    driver.find_element(By.ID, "block-icon").send_keys("🧪")
+    driver.execute_script("document.getElementById('block-icon').value = '🧪';")
     btn_block_submit = driver.find_element(By.CSS_SELECTOR, "#form-block button[type='submit']")
     driver.execute_script("arguments[0].click();", btn_block_submit)
     time.sleep(0.3)
@@ -666,7 +667,7 @@ def test_skincare_schedule_types(server, driver):
     time.sleep(0.1)
 
     # Select Wednesday (data-day="3")
-    wed_btn = driver.find_element(By.XPATH, "//div[@id='skincare-days-picker']/button[@data-day='3']")
+    wed_btn = driver.find_element(By.CSS_SELECTOR, "#subfield-days .day-pick-btn[data-day='3']")
     driver.execute_script("arguments[0].click();", wed_btn)
     time.sleep(0.1)
 
@@ -739,7 +740,7 @@ def test_form_validation(server, driver):
 
     # Don't fill name, just submit
     btn_block_submit = driver.find_element(By.CSS_SELECTOR, "#form-block button[type='submit']")
-    driver.execute_script("arguments[0].click();", btn_block_submit)
+    btn_block_submit.click()
     time.sleep(0.3)
 
     # Dialog should still be open (validation failed)
