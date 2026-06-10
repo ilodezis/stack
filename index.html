@@ -16,12 +16,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   
   <!-- Icons -->
-  <link rel="apple-touch-icon" href="icon.png?v=13">
-  <link rel="icon" type="image/png" href="icon.png?v=13">
-  <link rel="manifest" href="manifest.json?v=13">
+  <link rel="apple-touch-icon" href="icon.png?v=14">
+  <link rel="icon" type="image/png" href="icon.png?v=14">
+  <link rel="manifest" href="manifest.json?v=14">
   
   <!-- Styles -->
-  <link rel="stylesheet" href="css/app.css?v=13">
+  <link rel="stylesheet" href="css/app.css?v=14">
 </head>
 <body>
   
@@ -738,6 +738,19 @@
             </label>
           </div>
         </div>
+
+        <div class="form-group border-top-dashed" style="margin-top: 16px; padding-top: 12px;">
+          <label>Дни недели</label>
+          <div class="days-picker" id="workout-days-picker">
+            <button type="button" class="day-pick-btn" data-day="1">Пн</button>
+            <button type="button" class="day-pick-btn" data-day="2">Вт</button>
+            <button type="button" class="day-pick-btn" data-day="3">Ср</button>
+            <button type="button" class="day-pick-btn" data-day="4">Чт</button>
+            <button type="button" class="day-pick-btn" data-day="5">Пт</button>
+            <button type="button" class="day-pick-btn" data-day="6">Сб</button>
+            <button type="button" class="day-pick-btn" data-day="0">Вс</button>
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" id="btn-delete-workout" class="btn-action btn-danger" style="display: none;">Удалить программу</button>
@@ -811,6 +824,6 @@
   </div>
 
   <!-- Scripts -->
-  <script type="module" src="js/app.js?v=13"></script>
+  <script type="module" src="js/app.js?v=14"></script>
 </body>
 </html>

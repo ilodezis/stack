@@ -111,6 +111,7 @@ const DEMO_STATE = {
       name: 'Верх тела (Upper)',
       icon: '🏋️',
       color: 'den',
+      days: [1, 4],
       exercises: [
         {
           id: 'ex-demo-1',
@@ -148,6 +149,7 @@ const DEMO_STATE = {
       name: 'Низ тела (Lower)',
       icon: '🦵',
       color: 'rose',
+      days: [2, 5],
       exercises: [
         {
           id: 'ex-demo-4',
@@ -1980,12 +1982,32 @@ function renderProgramsList() {
       exercisesHTML = `<div class="row-item" style="padding: 10px; color: var(--text-secondary); font-size: 11.5px; justify-content: center; cursor: default;">Нет упражнений</div>`;
     }
 
+    let daysHTML = '';
+    if (workout.days && workout.days.length > 0) {
+      const todayDay = new Date().getDay();
+      const isToday = workout.days.includes(todayDay);
+      const sortedDays = [...workout.days].sort((a, b) => {
+        const valA = a === 0 ? 7 : a;
+        const valB = b === 0 ? 7 : b;
+        return valA - valB;
+      });
+      const daysText = sortedDays.map(d => DAY_LABELS[d]).join(', ');
+      daysHTML = `
+        <div class="workout-schedule-info">
+          <svg class="schedule-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span class="schedule-days">${daysText}</span>
+          ${isToday ? `<span class="badge-today">Сегодня</span>` : ''}
+        </div>
+      `;
+    }
+
     card.innerHTML = `
       <div class="card-header">
         <div class="card-header-left">
           <div class="card-ico">${workout.icon || '🏋️'}</div>
           <div class="card-titles">
             <span class="card-label">${workout.name}</span>
+            ${daysHTML}
           </div>
         </div>
         <div class="card-header-right">
@@ -2128,6 +2150,9 @@ workoutsEditToggle.addEventListener('click', () => {
 // DIALOG: Workout modal logic
 const btnDeleteWorkout = document.getElementById('btn-delete-workout');
 function openWorkoutModal(workout = null) {
+  // Clear any previous selection in the days picker
+  document.querySelectorAll('#workout-days-picker .day-pick-btn').forEach(btn => btn.classList.remove('selected'));
+
   if (workout) {
     document.getElementById('workout-dialog-title').textContent = 'Редактировать тренировку';
     document.getElementById('edit-workout-id').value = workout.id;
@@ -2137,6 +2162,14 @@ function openWorkoutModal(workout = null) {
     const colorRadio = formWorkout.querySelector(`input[name="workout-color"][value="${workout.color || 'den'}"]`);
     if (colorRadio) colorRadio.checked = true;
     
+    // Select days
+    if (workout.days) {
+      workout.days.forEach(day => {
+        const btn = document.querySelector(`#workout-days-picker .day-pick-btn[data-day="${day}"]`);
+        if (btn) btn.classList.add('selected');
+      });
+    }
+
     btnDeleteWorkout.style.display = 'block';
   } else {
     document.getElementById('workout-dialog-title').textContent = 'Новая тренировка';
@@ -2155,12 +2188,19 @@ formWorkout.addEventListener('submit', (e) => {
   const icon = document.getElementById('workout-icon').value.trim();
   const color = formWorkout.querySelector('input[name="workout-color"]:checked').value;
 
+  // Collect selected days
+  const selectedDays = [];
+  document.querySelectorAll('#workout-days-picker .day-pick-btn.selected').forEach(btn => {
+    selectedDays.push(parseInt(btn.dataset.day, 10));
+  });
+
   if (id) {
     const w = state.workouts.find(x => x.id === id);
     if (w) {
       w.name = name;
       w.icon = icon || '🏋️';
       w.color = color;
+      w.days = selectedDays;
     }
   } else {
     state.workouts.push({
@@ -2168,6 +2208,7 @@ formWorkout.addEventListener('submit', (e) => {
       name,
       icon: icon || '🏋️',
       color,
+      days: selectedDays,
       exercises: []
     });
   }

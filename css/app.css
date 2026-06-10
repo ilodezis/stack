@@ -2207,9 +2207,36 @@ html.dark .btn-toggle-workouts-edit:hover {
   height: 14px;
 }
 
-/* Card overrides for workouts programs */
 .card.workout-card {
   margin-bottom: 16px;
+}
+
+.workout-schedule-info {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.workout-schedule-info .schedule-icon {
+  width: 12px;
+  height: 12px;
+  opacity: 0.6;
+}
+
+.workout-schedule-info .badge-today {
+  background-color: var(--accent-color);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-left: 4px;
 }
 
 .workout-card-inner {
