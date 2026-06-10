@@ -17,6 +17,9 @@ let state = {
   blocks: [],
   items: [],
   skincareItems: [],
+  workouts: [],
+  workoutLogs: [],
+  activeWorkout: null,
   lastCompletionDate: '',
   lastWeekNumber: 0,
   settings: {
@@ -25,17 +28,29 @@ let state = {
     skincareEnabled: false,
     suppSchedulingEnabled: false,
     suppStockEnabled: false,
-    skinExpirationEnabled: false
+    skinExpirationEnabled: false,
+    workoutsEnabled: false,
+    workoutRestTime: 90
   }
 };
 
 let editMode = false;
 let searchQuery = '';
 
+let workoutsEditMode = false;
+let workoutActiveTab = 'programs'; // 'programs' or 'history'
+let workoutTimerInterval = null;
+let restTimerInterval = null;
+let restTimerTotalSeconds = 0;
+let restTimerSecondsLeft = 0;
+
 const DEFAULT_STATE = {
   blocks: [],
   items: [],
   skincareItems: [],
+  workouts: [],
+  workoutLogs: [],
+  activeWorkout: null,
   lastCompletionDate: '',
   lastWeekNumber: 0,
   settings: {
@@ -44,7 +59,9 @@ const DEFAULT_STATE = {
     skincareEnabled: false,
     suppSchedulingEnabled: false,
     suppStockEnabled: false,
-    skinExpirationEnabled: false
+    skinExpirationEnabled: false,
+    workoutsEnabled: false,
+    workoutRestTime: 90
   }
 };
 
@@ -88,6 +105,109 @@ const DEMO_STATE = {
     { id: 'skin-demo-6', name: 'Пилинг с AHA/BHA кислотами', timing: 'evening', scheduleType: 'frequency', targetFrequency: 2, currentWeekCount: 0, history: {} },
     { id: 'skin-demo-7', name: 'Ночной увлажняющий крем', timing: 'evening', scheduleType: 'daily', currentWeekCount: 0, history: {} }
   ],
+  workouts: [
+    {
+      id: 'workout-demo-1',
+      name: 'Верх тела (Upper)',
+      icon: '🏋️',
+      color: 'den',
+      exercises: [
+        {
+          id: 'ex-demo-1',
+          name: 'Жим штанги лежа',
+          notes: 'Сведение лопаток, средний темп',
+          sets: [
+            { weight: '50 кг', reps: 10, checked: false },
+            { weight: '50 кг', reps: 10, checked: false },
+            { weight: '55 кг', reps: 8, checked: false }
+          ]
+        },
+        {
+          id: 'ex-demo-2',
+          name: 'Подтягивания на турнике',
+          notes: 'Широкий хват, до подбородка',
+          sets: [
+            { weight: 'Свой вес', reps: 8, checked: false },
+            { weight: 'Свой вес', reps: 8, checked: false },
+            { weight: 'Свой вес', reps: 6, checked: false }
+          ]
+        },
+        {
+          id: 'ex-demo-3',
+          name: 'Жим гантелей сидя',
+          notes: 'Угол скамьи 80 градусов',
+          sets: [
+            { weight: '16 кг', reps: 10, checked: false },
+            { weight: '16 кг', reps: 10, checked: false }
+          ]
+        }
+      ]
+    },
+    {
+      id: 'workout-demo-2',
+      name: 'Низ тела (Lower)',
+      icon: '🦵',
+      color: 'rose',
+      exercises: [
+        {
+          id: 'ex-demo-4',
+          name: 'Приседания со штангой',
+          notes: 'Глубокий присед, упор на пятки',
+          sets: [
+            { weight: '60 кг', reps: 10, checked: false },
+            { weight: '65 кг', reps: 10, checked: false },
+            { weight: '70 кг', reps: 8, checked: false }
+          ]
+        },
+        {
+          id: 'ex-demo-5',
+          name: 'Румынская тяга',
+          notes: 'Спина ровная, натяжение в бицепсе бедра',
+          sets: [
+            { weight: '50 кг', reps: 10, checked: false },
+            { weight: '55 кг', reps: 10, checked: false }
+          ]
+        },
+        {
+          id: 'ex-demo-6',
+          name: 'Скручивания на пресс',
+          notes: 'На наклонной скамье',
+          sets: [
+            { weight: 'Свой вес', reps: 15, checked: false },
+            { weight: 'Свой вес', reps: 15, checked: false }
+          ]
+        }
+      ]
+    }
+  ],
+  workoutLogs: [
+    {
+      id: 'log-demo-1',
+      date: '2026-06-08',
+      workoutName: 'Верх тела (Upper)',
+      icon: '🏋️',
+      color: 'den',
+      durationSeconds: 2520,
+      totalWeightLifted: 2710,
+      exercises: [
+        {
+          name: 'Жим штанги лежа',
+          sets: [
+            { weight: '50 кг', reps: 10, completed: true },
+            { weight: '50 кг', reps: 10, completed: true },
+            { weight: '55 кг', reps: 8, completed: true }
+          ]
+        },
+        {
+          name: 'Подтягивания на турнике',
+          sets: [
+            { weight: 'Свой вес', reps: 8, completed: true },
+            { weight: 'Свой вес', reps: 8, completed: true }
+          ]
+        }
+      ]
+    }
+  ],
   lastCompletionDate: '',
   settings: {
     dailyTrackingEnabled: false,
@@ -95,7 +215,9 @@ const DEMO_STATE = {
     skincareEnabled: false,
     suppSchedulingEnabled: false,
     suppStockEnabled: false,
-    skinExpirationEnabled: false
+    skinExpirationEnabled: false,
+    workoutsEnabled: false,
+    workoutRestTime: 90
   }
 };
 
@@ -154,7 +276,9 @@ function loadState() {
           skincareEnabled: false,
           suppSchedulingEnabled: false,
           suppStockEnabled: false,
-          skinExpirationEnabled: false
+          skinExpirationEnabled: false,
+          workoutsEnabled: false,
+          workoutRestTime: 90
         };
       } else {
         if (state.settings.onboardingCompleted === undefined) {
@@ -164,10 +288,19 @@ function loadState() {
         if (state.settings.suppSchedulingEnabled === undefined) state.settings.suppSchedulingEnabled = false;
         if (state.settings.suppStockEnabled === undefined) state.settings.suppStockEnabled = false;
         if (state.settings.skinExpirationEnabled === undefined) state.settings.skinExpirationEnabled = false;
+        if (state.settings.workoutsEnabled === undefined) state.settings.workoutsEnabled = false;
+        if (state.settings.workoutRestTime === undefined) state.settings.workoutRestTime = 90;
       }
       // Migrate: add skincareItems if missing
       if (!state.skincareItems) {
         state.skincareItems = [];
+      }
+      // Migrate workouts and workoutLogs if missing
+      if (!state.workouts) {
+        state.workouts = [];
+      }
+      if (!state.workoutLogs) {
+        state.workoutLogs = [];
       }
       if (state.lastWeekNumber === undefined) {
         state.lastWeekNumber = getCurrentWeekNumber();
@@ -216,25 +349,37 @@ function saveState() {
 }
 
 function applyFeatureToggles() {
-  // 1. Skincare tab toggle
+  // 1. Bottom nav tabs and main bar layout
   const bottomNav = document.querySelector('.bottom-nav');
+  const navSkincare = document.getElementById('nav-skincare');
+  const navWorkouts = document.getElementById('nav-workouts');
+
+  const skincareOn = state.settings.skincareEnabled || false;
+  const workoutsOn = state.settings.workoutsEnabled || false;
+
+  if (navSkincare) navSkincare.style.display = skincareOn ? 'flex' : 'none';
+  if (navWorkouts) navWorkouts.style.display = workoutsOn ? 'flex' : 'none';
+
   if (bottomNav) {
-    if (state.settings.skincareEnabled) {
+    if (skincareOn || workoutsOn) {
       bottomNav.style.display = 'flex';
       document.body.classList.remove('no-bottom-nav');
     } else {
       bottomNav.style.display = 'none';
       document.body.classList.add('no-bottom-nav');
+      
       // Force active screen to supplements
       const navSupplements = document.getElementById('nav-supplements');
-      const navSkincare = document.getElementById('nav-skincare');
       const screenSupplements = document.getElementById('screen-supplements');
       const screenSkincare = document.getElementById('screen-skincare');
+      const screenWorkouts = document.getElementById('screen-workouts');
       
       if (navSupplements) navSupplements.classList.add('active');
       if (navSkincare) navSkincare.classList.remove('active');
+      if (navWorkouts) navWorkouts.classList.remove('active');
       if (screenSupplements) screenSupplements.classList.add('active');
       if (screenSkincare) screenSkincare.classList.remove('active');
+      if (screenWorkouts) screenWorkouts.classList.remove('active');
     }
   }
 
@@ -254,6 +399,12 @@ function applyFeatureToggles() {
   const skincareExpGroup = document.getElementById('skincare-expiration-toggle-group');
   if (skincareExpGroup) {
     skincareExpGroup.style.display = state.settings.skinExpirationEnabled ? 'block' : 'none';
+  }
+
+  // 5. Workouts settings
+  const restGroup = document.getElementById('setting-workout-rest-group');
+  if (restGroup) {
+    restGroup.style.display = workoutsOn ? 'block' : 'none';
   }
 }
 
@@ -277,6 +428,8 @@ const settingSkincareEnabled = document.getElementById('setting-skincare-enabled
 const settingSuppScheduling = document.getElementById('setting-supp-scheduling');
 const settingSuppStock = document.getElementById('setting-supp-stock');
 const settingSkinExpiration = document.getElementById('setting-skin-expiration');
+const settingWorkoutsEnabled = document.getElementById('setting-workouts-enabled');
+const settingWorkoutRestTime = document.getElementById('setting-workout-rest-time');
 
 // Modals
 const dialogBlock = document.getElementById('dialog-block');
@@ -284,6 +437,10 @@ const formBlock = document.getElementById('form-block');
 const dialogItem = document.getElementById('dialog-item');
 const formItem = document.getElementById('form-item');
 const dialogSettings = document.getElementById('dialog-settings');
+const dialogWorkout = document.getElementById('dialog-workout');
+const formWorkout = document.getElementById('form-workout');
+const dialogExercise = document.getElementById('dialog-exercise');
+const formExercise = document.getElementById('form-exercise');
 
 // --- THEME ---
 function initTheme() {
@@ -956,6 +1113,8 @@ settingsBtn.addEventListener('click', () => {
   settingSuppScheduling.checked = state.settings.suppSchedulingEnabled || false;
   settingSuppStock.checked = state.settings.suppStockEnabled || false;
   settingSkinExpiration.checked = state.settings.skinExpirationEnabled || false;
+  settingWorkoutsEnabled.checked = state.settings.workoutsEnabled || false;
+  settingWorkoutRestTime.value = state.settings.workoutRestTime || 90;
   dialogSettings.showModal();
 });
 
@@ -995,6 +1154,20 @@ settingSkinExpiration.addEventListener('change', (e) => {
   showToast(state.settings.skinExpirationEnabled ? 'Сроки годности косметики включены' : 'Сроки годности косметики выключены');
 });
 
+settingWorkoutsEnabled.addEventListener('change', (e) => {
+  state.settings.workoutsEnabled = e.target.checked;
+  saveState();
+  renderApp();
+  renderWorkoutsScreen();
+  showToast(state.settings.workoutsEnabled ? 'Раздел Тренировки включен' : 'Раздел Тренировки выключен');
+});
+
+settingWorkoutRestTime.addEventListener('change', (e) => {
+  state.settings.workoutRestTime = parseInt(e.target.value) || 90;
+  saveState();
+  showToast('Время отдыха сохранено');
+});
+
 // Reset stack to default state
 document.getElementById('btn-reset-default').addEventListener('click', () => {
   if (confirm('Вы уверены, что хотите сбросить все ваши настройки к начальным? Все текущие данные будут удалены.')) {
@@ -1004,6 +1177,7 @@ document.getElementById('btn-reset-default').addEventListener('click', () => {
     saveState();
     renderApp();
     renderSkincareScreen();
+    renderWorkoutsScreen();
     dialogSettings.close();
     checkOnboarding();
     showToast('Стек сброшен к исходному');
@@ -1046,10 +1220,13 @@ importFileInput.addEventListener('change', (e) => {
         // Keep date alignment or force current
         state.lastCompletionDate = state.lastCompletionDate || getTodayString();
         if (!state.skincareItems) state.skincareItems = [];
+        if (!state.workouts) state.workouts = [];
+        if (!state.workoutLogs) state.workoutLogs = [];
         if (state.lastWeekNumber === undefined) state.lastWeekNumber = getCurrentWeekNumber();
         saveState();
         renderApp();
         renderSkincareScreen();
+        renderWorkoutsScreen();
         dialogSettings.close();
         showToast('Импорт успешно завершен!');
       } else {
@@ -1201,7 +1378,9 @@ loadState();
 checkOnboarding();
 renderApp();
 renderSkincareScreen();
+renderWorkoutsScreen();
 initBottomNav();
+resumeActiveWorkoutTimer();
 
 // ================================================================
 // BOTTOM NAV
@@ -1209,23 +1388,41 @@ initBottomNav();
 function initBottomNav() {
   const navSupplements = document.getElementById('nav-supplements');
   const navSkincare = document.getElementById('nav-skincare');
+  const navWorkouts = document.getElementById('nav-workouts');
   const screenSupplements = document.getElementById('screen-supplements');
   const screenSkincare = document.getElementById('screen-skincare');
+  const screenWorkouts = document.getElementById('screen-workouts');
 
   navSupplements.addEventListener('click', () => {
     navSupplements.classList.add('active');
     navSkincare.classList.remove('active');
+    if (navWorkouts) navWorkouts.classList.remove('active');
     screenSupplements.classList.add('active');
     screenSkincare.classList.remove('active');
+    if (screenWorkouts) screenWorkouts.classList.remove('active');
   });
 
   navSkincare.addEventListener('click', () => {
     navSkincare.classList.add('active');
     navSupplements.classList.remove('active');
+    if (navWorkouts) navWorkouts.classList.remove('active');
     screenSkincare.classList.add('active');
     screenSupplements.classList.remove('active');
+    if (screenWorkouts) screenWorkouts.classList.remove('active');
     renderSkincareScreen();
   });
+
+  if (navWorkouts) {
+    navWorkouts.addEventListener('click', () => {
+      navWorkouts.classList.add('active');
+      navSupplements.classList.remove('active');
+      navSkincare.classList.remove('active');
+      if (screenWorkouts) screenWorkouts.classList.add('active');
+      screenSupplements.classList.remove('active');
+      screenSkincare.classList.remove('active');
+      renderWorkoutsScreen();
+    });
+  }
 }
 
 // ================================================================
@@ -1662,3 +1859,900 @@ btnDeleteSkincare.addEventListener('click', () => {
     showToast('Средство удалено');
   }
 });
+
+// ================================================================
+// WORKOUTS MODULE
+// ================================================================
+
+// Render Workouts Screen
+function renderWorkoutsScreen() {
+  const activeView = document.getElementById('workout-active-view');
+  const normalView = document.getElementById('workout-normal-view');
+
+  if (state.activeWorkout) {
+    activeView.style.display = 'block';
+    normalView.style.display = 'none';
+    renderActiveWorkout();
+  } else {
+    activeView.style.display = 'none';
+    normalView.style.display = 'block';
+    
+    // Toggle between sub-tabs
+    const programsSection = document.getElementById('workout-programs-section');
+    const historySection = document.getElementById('workout-history-section');
+    const tabPrograms = document.getElementById('tab-workout-programs');
+    const tabHistory = document.getElementById('tab-workout-history');
+
+    if (workoutActiveTab === 'programs') {
+      programsSection.style.display = 'block';
+      historySection.style.display = 'none';
+      tabPrograms.classList.add('active');
+      tabHistory.classList.remove('active');
+      renderProgramsList();
+    } else {
+      programsSection.style.display = 'none';
+      historySection.style.display = 'block';
+      tabPrograms.classList.remove('active');
+      tabHistory.classList.add('active');
+      renderHistoryList();
+    }
+  }
+}
+
+// Sub-tabs clicks
+document.getElementById('tab-workout-programs').addEventListener('click', () => {
+  workoutActiveTab = 'programs';
+  renderWorkoutsScreen();
+});
+
+document.getElementById('tab-workout-history').addEventListener('click', () => {
+  workoutActiveTab = 'history';
+  renderWorkoutsScreen();
+});
+
+// Programs / Routines rendering
+function renderProgramsList() {
+  const container = document.getElementById('workout-programs-list');
+  container.innerHTML = '';
+
+  const addWorkoutContainer = document.getElementById('add-workout-container');
+  addWorkoutContainer.style.display = workoutsEditMode ? 'block' : 'none';
+
+  if (state.workouts.length === 0) {
+    const emptyCard = document.createElement('div');
+    emptyCard.className = 'empty-state-card';
+    emptyCard.style.gridColumn = '1 / -1';
+    emptyCard.innerHTML = `
+      <div class="empty-state-illustration">🏋️</div>
+      <h3 class="empty-state-title">Программы тренировок не созданы</h3>
+      <p class="empty-state-text">Создайте свой тренировочный день, добавьте в него упражнения и начните заниматься.</p>
+      <button id="btn-create-first-workout" class="btn-action btn-primary btn-empty-state">
+        Создать первую программу
+      </button>
+    `;
+    emptyCard.querySelector('#btn-create-first-workout').addEventListener('click', () => {
+      if (!workoutsEditMode) {
+        document.getElementById('workouts-edit-toggle').click();
+      }
+      openWorkoutModal(null);
+    });
+    container.appendChild(emptyCard);
+    container.style.display = 'block';
+    return;
+  } else {
+    container.style.display = '';
+  }
+
+  state.workouts.forEach(workout => {
+    const card = document.createElement('div');
+    card.className = `card ${workout.color || 'den'} workout-card`;
+    card.dataset.id = workout.id;
+
+    // Build exercises preview list
+    let exercisesHTML = '';
+    if (workout.exercises && workout.exercises.length > 0) {
+      exercisesHTML = workout.exercises.map(ex => {
+        const setsCount = ex.sets ? ex.sets.length : 0;
+        return `
+          <div class="row-item" style="padding: 6px 8px; cursor: default;" data-id="${ex.id}">
+            <div class="row-item-left">
+              <div class="row-content">
+                <span class="row-name" style="font-size:12.5px;">${ex.name}</span>
+                ${ex.notes ? `<span class="row-cond" style="font-size:9px;">${ex.notes}</span>` : ''}
+              </div>
+            </div>
+            <span class="dose-tag" style="font-size:9.5px; padding:2px 6px;">${setsCount} подх.</span>
+            <div class="row-edit-actions" style="display: ${workoutsEditMode ? 'flex' : 'none'};">
+              <button type="button" class="btn-card-action btn-edit-exercise" title="Редактировать упражнение">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+              </button>
+              <div class="btn-card-action exercise-drag-handle" title="Перетащить">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } else {
+      exercisesHTML = `<div class="row-item" style="padding: 10px; color: var(--text-secondary); font-size: 11.5px; justify-content: center; cursor: default;">Нет упражнений</div>`;
+    }
+
+    card.innerHTML = `
+      <div class="card-header">
+        <div class="card-header-left">
+          <div class="card-ico">${workout.icon || '🏋️'}</div>
+          <div class="card-titles">
+            <span class="card-label">${workout.name}</span>
+          </div>
+        </div>
+        <div class="card-header-right">
+          <button class="btn-card-action btn-edit-workout" title="Редактировать тренировку" style="display: ${workoutsEditMode ? 'flex' : 'none'};">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </button>
+          <div class="btn-card-action workout-drag-handle" title="Перетащить программу" style="display: ${workoutsEditMode ? 'flex' : 'none'};">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+          </div>
+        </div>
+      </div>
+      <div class="rows-container exercises-rows-container" data-workout-id="${workout.id}">
+        ${exercisesHTML}
+      </div>
+      <div class="workout-card-inner">
+        <button class="workout-start-btn" data-id="${workout.id}">Начать тренировку</button>
+        <button class="add-item-card-btn add-exercise-card-btn" data-workout-id="${workout.id}">
+          <span>+ Упражнение</span>
+        </button>
+      </div>
+    `;
+
+    // Start workout event listener
+    const startBtn = card.querySelector('.workout-start-btn');
+    startBtn.addEventListener('click', () => {
+      startWorkoutSession(workout.id);
+    });
+
+    // Edit workout button
+    card.querySelector('.btn-edit-workout').addEventListener('click', (e) => {
+      e.stopPropagation();
+      openWorkoutModal(workout);
+    });
+
+    // Add exercise button
+    card.querySelector('.add-exercise-card-btn').addEventListener('click', (e) => {
+      openExerciseModal(null, workout.id);
+    });
+
+    // Edit exercises click handlers
+    card.querySelectorAll('.btn-edit-exercise').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const row = e.target.closest('.row-item');
+        const exId = row.dataset.id;
+        const ex = workout.exercises.find(e => e.id === exId);
+        openExerciseModal(ex, workout.id);
+      });
+    });
+
+    container.appendChild(card);
+  });
+
+  if (workoutsEditMode) {
+    initWorkoutsDragAndDrop();
+  }
+}
+
+// Workouts drag-and-drop
+let sortableWorkoutsList = null;
+let sortableExercisesList = [];
+
+function initWorkoutsDragAndDrop() {
+  const listContainer = document.getElementById('workout-programs-list');
+  if (sortableWorkoutsList) {
+    sortableWorkoutsList.destroy();
+  }
+  sortableExercisesList.forEach(s => s.destroy());
+  sortableExercisesList = [];
+
+  // Sort programs/days
+  sortableWorkoutsList = Sortable.create(listContainer, {
+    handle: '.workout-drag-handle',
+    animation: 200,
+    ghostClass: 'sortable-ghost',
+    onEnd: () => {
+      const newOrder = [];
+      listContainer.querySelectorAll('.card.workout-card').forEach(cardEl => {
+        const id = cardEl.dataset.id;
+        const w = state.workouts.find(x => x.id === id);
+        if (w) newOrder.push(w);
+      });
+      state.workouts = newOrder;
+      saveState();
+    }
+  });
+
+  // Sort exercises inside cards
+  listContainer.querySelectorAll('.exercises-rows-container').forEach(container => {
+    const sItem = Sortable.create(container, {
+      group: 'exercises',
+      handle: '.exercise-drag-handle',
+      animation: 200,
+      ghostClass: 'sortable-ghost',
+      onEnd: () => {
+        const updatedWorkouts = [];
+        
+        listContainer.querySelectorAll('.card.workout-card').forEach(card => {
+          const wId = card.dataset.id;
+          const workout = state.workouts.find(x => x.id === wId);
+          if (workout) {
+            const newExs = [];
+            card.querySelectorAll('.row-item').forEach(row => {
+              const exId = row.dataset.id;
+              // Find exercise in any of the workouts (it was dragged)
+              let exercise = null;
+              state.workouts.forEach(w => {
+                const found = w.exercises.find(e => e.id === exId);
+                if (found) exercise = found;
+              });
+              if (exercise) {
+                newExs.push(exercise);
+              }
+            });
+            workout.exercises = newExs;
+          }
+        });
+        
+        saveState();
+        renderProgramsList();
+      }
+    });
+    sortableExercisesList.push(sItem);
+  });
+}
+
+// Workouts Edit Mode Toggle
+const workoutsEditToggle = document.getElementById('workouts-edit-toggle');
+const workoutsEditBtnText = document.getElementById('workouts-edit-btn-text');
+
+workoutsEditToggle.addEventListener('click', () => {
+  workoutsEditMode = !workoutsEditMode;
+  document.body.classList.toggle('edit-mode-workouts', workoutsEditMode);
+  workoutsEditToggle.classList.toggle('active', workoutsEditMode);
+  workoutsEditBtnText.textContent = workoutsEditMode ? 'Готово' : 'Настроить';
+  renderProgramsList();
+  showToast(workoutsEditMode ? 'Режим настройки активен' : 'Изменения сохранены');
+});
+
+// DIALOG: Workout modal logic
+const btnDeleteWorkout = document.getElementById('btn-delete-workout');
+function openWorkoutModal(workout = null) {
+  if (workout) {
+    document.getElementById('workout-dialog-title').textContent = 'Редактировать тренировку';
+    document.getElementById('edit-workout-id').value = workout.id;
+    document.getElementById('workout-name').value = workout.name;
+    document.getElementById('workout-icon').value = workout.icon || '';
+    
+    const colorRadio = formWorkout.querySelector(`input[name="workout-color"][value="${workout.color || 'den'}"]`);
+    if (colorRadio) colorRadio.checked = true;
+    
+    btnDeleteWorkout.style.display = 'block';
+  } else {
+    document.getElementById('workout-dialog-title').textContent = 'Новая тренировка';
+    document.getElementById('edit-workout-id').value = '';
+    formWorkout.reset();
+    btnDeleteWorkout.style.display = 'none';
+  }
+  dialogWorkout.showModal();
+}
+
+formWorkout.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const id = document.getElementById('edit-workout-id').value;
+  const name = document.getElementById('workout-name').value.trim();
+  const icon = document.getElementById('workout-icon').value.trim();
+  const color = formWorkout.querySelector('input[name="workout-color"]:checked').value;
+
+  if (id) {
+    const w = state.workouts.find(x => x.id === id);
+    if (w) {
+      w.name = name;
+      w.icon = icon || '🏋️';
+      w.color = color;
+    }
+  } else {
+    state.workouts.push({
+      id: 'workout-' + Date.now(),
+      name,
+      icon: icon || '🏋️',
+      color,
+      exercises: []
+    });
+  }
+
+  saveState();
+  renderProgramsList();
+  dialogWorkout.close();
+  showToast('Тренировка сохранена');
+});
+
+btnDeleteWorkout.addEventListener('click', () => {
+  const id = document.getElementById('edit-workout-id').value;
+  if (!id) return;
+  
+  const w = state.workouts.find(x => x.id === id);
+  const exCount = w && w.exercises ? w.exercises.length : 0;
+  const msg = exCount > 0 
+    ? `Удалить тренировочный день и все упражнения в нем (${exCount} шт.)?`
+    : 'Удалить этот тренировочный день?';
+
+  if (confirm(msg)) {
+    state.workouts = state.workouts.filter(x => x.id !== id);
+    saveState();
+    renderProgramsList();
+    dialogWorkout.close();
+    showToast('Тренировка удалена');
+  }
+});
+
+document.getElementById('add-workout-btn').addEventListener('click', () => {
+  openWorkoutModal(null);
+});
+
+// DIALOG: Exercise modal logic
+const btnDeleteExercise = document.getElementById('btn-delete-exercise');
+const setsListEditor = document.getElementById('exercise-sets-list');
+
+function openExerciseModal(exercise = null, workoutId = '') {
+  document.getElementById('exercise-workout-id').value = workoutId;
+  setsListEditor.innerHTML = '';
+
+  if (exercise) {
+    document.getElementById('exercise-dialog-title').textContent = 'Редактировать упражнение';
+    document.getElementById('edit-exercise-id').value = exercise.id;
+    document.getElementById('exercise-name').value = exercise.name;
+    document.getElementById('exercise-notes').value = exercise.notes || '';
+    
+    if (exercise.sets && exercise.sets.length > 0) {
+      exercise.sets.forEach((set, idx) => {
+        addSetRowEditor(idx + 1, set.weight, set.reps);
+      });
+    } else {
+      addSetRowEditor(1, '', '');
+    }
+    btnDeleteExercise.style.display = 'block';
+  } else {
+    document.getElementById('exercise-dialog-title').textContent = 'Добавить упражнение';
+    document.getElementById('edit-exercise-id').value = '';
+    document.getElementById('exercise-name').value = '';
+    document.getElementById('exercise-notes').value = '';
+    addSetRowEditor(1, '', '');
+    btnDeleteExercise.style.display = 'none';
+  }
+  dialogExercise.showModal();
+}
+
+function addSetRowEditor(number, weight = '', reps = '') {
+  const row = document.createElement('div');
+  row.className = 'set-row-item';
+  row.innerHTML = `
+    <span class="set-row-label">${number}</span>
+    <input type="text" class="weight" placeholder="Напр: 60 кг" required value="${weight}">
+    <input type="number" class="reps" placeholder="Повт." min="1" required value="${reps}">
+    <button type="button" class="btn-delete-set-row" title="Удалить подход">&times;</button>
+  `;
+  
+  row.querySelector('.btn-delete-set-row').addEventListener('click', () => {
+    row.remove();
+    reindexSetRowLabels();
+  });
+  
+  setsListEditor.appendChild(row);
+}
+
+function reindexSetRowLabels() {
+  const rows = setsListEditor.querySelectorAll('.set-row-item');
+  rows.forEach((row, idx) => {
+    row.querySelector('.set-row-label').textContent = idx + 1;
+  });
+}
+
+document.getElementById('btn-add-set-row').addEventListener('click', () => {
+  const count = setsListEditor.querySelectorAll('.set-row-item').length;
+  addSetRowEditor(count + 1, '', '');
+});
+
+formExercise.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const wId = document.getElementById('exercise-workout-id').value;
+  const exId = document.getElementById('edit-exercise-id').value;
+  const name = document.getElementById('exercise-name').value.trim();
+  const notes = document.getElementById('exercise-notes').value.trim();
+
+  // Compile sets
+  const sets = [];
+  setsListEditor.querySelectorAll('.set-row-item').forEach(row => {
+    const weight = row.querySelector('.weight').value.trim();
+    const reps = parseInt(row.querySelector('.reps').value) || 10;
+    sets.push({ weight, reps, checked: false });
+  });
+
+  const workout = state.workouts.find(x => x.id === wId);
+  if (!workout) return;
+
+  if (exId) {
+    const ex = workout.exercises.find(x => x.id === exId);
+    if (ex) {
+      ex.name = name;
+      ex.notes = notes;
+      ex.sets = sets;
+    }
+  } else {
+    workout.exercises.push({
+      id: 'ex-' + Date.now(),
+      name,
+      notes,
+      sets
+    });
+  }
+
+  saveState();
+  renderProgramsList();
+  dialogExercise.close();
+  showToast('Упражнение сохранено');
+});
+
+btnDeleteExercise.addEventListener('click', () => {
+  const wId = document.getElementById('exercise-workout-id').value;
+  const exId = document.getElementById('edit-exercise-id').value;
+  if (!wId || !exId) return;
+
+  if (confirm('Удалить это упражнение из программы?')) {
+    const workout = state.workouts.find(x => x.id === wId);
+    if (workout) {
+      workout.exercises = workout.exercises.filter(x => x.id !== exId);
+      saveState();
+      renderProgramsList();
+      dialogExercise.close();
+      showToast('Упражнение удалено');
+    }
+  }
+});
+
+// ================================================================
+// ACTIVE WORKOUT SESSION PLAYER
+// ================================================================
+
+function startWorkoutSession(workoutId) {
+  const workout = state.workouts.find(x => x.id === workoutId);
+  if (!workout) return;
+
+  // Clone exercises and sets structure so we don't mess up templates
+  const exercises = JSON.parse(JSON.stringify(workout.exercises));
+  exercises.forEach(ex => {
+    if (ex.sets) {
+      ex.sets.forEach(s => s.checked = false);
+    }
+  });
+
+  state.activeWorkout = {
+    workoutId,
+    startTime: Date.now(),
+    exercises
+  };
+
+  saveState();
+  startWorkoutTimer(state.activeWorkout.startTime);
+  
+  // Transition views
+  document.getElementById('workout-active-view').style.display = 'block';
+  document.getElementById('workout-normal-view').style.display = 'none';
+  renderActiveWorkout();
+  
+  showToast('Тренировка началась. Удачи! 🏋️');
+}
+
+function startWorkoutTimer(startTime) {
+  if (workoutTimerInterval) {
+    clearInterval(workoutTimerInterval);
+  }
+  
+  const timerText = document.getElementById('active-workout-timer');
+  
+  function update() {
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    const hrs = String(Math.floor(elapsed / 3600)).padStart(2, '0');
+    const mins = String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0');
+    const secs = String(elapsed % 60).padStart(2, '0');
+    timerText.textContent = `${hrs}:${mins}:${secs}`;
+  }
+  
+  update();
+  workoutTimerInterval = setInterval(update, 1000);
+}
+
+function resumeActiveWorkoutTimer() {
+  if (state.activeWorkout) {
+    startWorkoutTimer(state.activeWorkout.startTime);
+    document.getElementById('workout-active-view').style.display = 'block';
+    document.getElementById('workout-normal-view').style.display = 'none';
+    
+    // Switch navigation tab to workouts
+    const navWorkouts = document.getElementById('nav-workouts');
+    if (navWorkouts) {
+      navWorkouts.click();
+    }
+  }
+}
+
+function stopWorkoutTimer() {
+  if (workoutTimerInterval) {
+    clearInterval(workoutTimerInterval);
+    workoutTimerInterval = null;
+  }
+  document.getElementById('active-workout-timer').textContent = '00:00:00';
+}
+
+function renderActiveWorkout() {
+  if (!state.activeWorkout) return;
+
+  const workout = state.workouts.find(x => x.id === state.activeWorkout.workoutId);
+  document.getElementById('active-workout-title').textContent = workout ? workout.name : 'Активная тренировка';
+
+  const container = document.getElementById('active-workout-exercises-list');
+  container.innerHTML = '';
+
+  let totalSets = 0;
+  let completedSets = 0;
+
+  state.activeWorkout.exercises.forEach((ex, exIdx) => {
+    const card = document.createElement('div');
+    card.className = 'active-exercise-card';
+    
+    const sets = ex.sets || [];
+    totalSets += sets.length;
+    const isExCompleted = sets.length > 0 && sets.every(s => s.checked);
+    if (isExCompleted) {
+      card.classList.add('completed');
+    }
+
+    let setsHTML = '';
+    sets.forEach((set, setIdx) => {
+      if (set.checked) completedSets++;
+      
+      setsHTML += `
+        <div class="active-set-row ${set.checked ? 'checked' : ''}" data-ex="${exIdx}" data-set="${setIdx}">
+          <div class="active-set-row-left">
+            <span class="active-set-number">${setIdx + 1}</span>
+            <span class="active-set-details">${set.weight} x ${set.reps}</span>
+          </div>
+          <div class="set-checkbox" role="checkbox" aria-checked="${set.checked}"></div>
+        </div>
+      `;
+    });
+
+    card.innerHTML = `
+      <div class="active-exercise-header">
+        <div>
+          <h3 class="active-exercise-title">${ex.name}</h3>
+          ${ex.notes ? `<p class="active-exercise-notes">${ex.notes}</p>` : ''}
+        </div>
+        <span class="active-exercise-check-badge">✓ Выполнено</span>
+      </div>
+      <div class="active-exercise-body">
+        ${setsHTML}
+      </div>
+    `;
+
+    // Add set row click events
+    card.querySelectorAll('.active-set-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const exIdx = parseInt(row.dataset.ex);
+        const setIdx = parseInt(row.dataset.set);
+        toggleActiveSet(exIdx, setIdx);
+      });
+    });
+
+    container.appendChild(card);
+  });
+
+  // Render overall progress
+  const pct = totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0;
+  document.getElementById('active-workout-progress-text').textContent = `${completedSets} из ${totalSets} (${pct}%)`;
+  document.getElementById('active-workout-progress-fill').style.width = `${pct}%`;
+}
+
+function toggleActiveSet(exIdx, setIdx) {
+  if (!state.activeWorkout) return;
+
+  const set = state.activeWorkout.exercises[exIdx].sets[setIdx];
+  set.checked = !set.checked;
+
+  saveState();
+  renderActiveWorkout();
+
+  // If checked to done, run rest timer
+  if (set.checked) {
+    const time = state.settings.workoutRestTime || 90;
+    startRestTimer(time);
+  } else {
+    // If unchecked, and it is the rest timer that is currently active, we can optionally hide it.
+  }
+}
+
+// Finish workout session
+document.getElementById('btn-finish-workout').addEventListener('click', () => {
+  if (!state.activeWorkout) return;
+
+  if (confirm('Завершить эту тренировку и сохранить результаты?')) {
+    const elapsedSeconds = Math.floor((Date.now() - state.activeWorkout.startTime) / 1000);
+    const templateWorkout = state.workouts.find(x => x.id === state.activeWorkout.workoutId);
+    
+    // Calculate total weight lifted
+    let tonnage = 0;
+    const logExercises = [];
+
+    state.activeWorkout.exercises.forEach(ex => {
+      const completedSets = ex.sets.filter(s => s.checked);
+      if (completedSets.length > 0) {
+        logExercises.push({
+          name: ex.name,
+          sets: completedSets.map(s => ({ weight: s.weight, reps: s.reps, completed: true }))
+        });
+
+        completedSets.forEach(s => {
+          // Parse weight: extract numbers (e.g. "60 кг" -> 60, "52.5" -> 52.5)
+          const weightNum = parseFloat(s.weight.replace(/,/g, '.').replace(/[^\d.]/g, '')) || 0;
+          tonnage += weightNum * s.reps;
+        });
+      }
+    });
+
+    // Create log entry
+    const log = {
+      id: 'log-' + Date.now(),
+      date: getTodayString(),
+      workoutName: templateWorkout ? templateWorkout.name : 'Тренировка',
+      icon: templateWorkout ? templateWorkout.icon : '🏋️',
+      color: templateWorkout ? templateWorkout.color : 'den',
+      durationSeconds: elapsedSeconds,
+      totalWeightLifted: Math.round(tonnage),
+      exercises: logExercises
+    };
+
+    state.workoutLogs.push(log);
+    state.activeWorkout = null;
+    saveState();
+    
+    stopWorkoutTimer();
+    stopRestTimer();
+    
+    // Return to main workouts view and render History
+    workoutActiveTab = 'history';
+    renderWorkoutsScreen();
+
+    // Show achievement celebration toast
+    const mins = Math.round(elapsedSeconds / 60);
+    alert(`🎉 Отличная работа! \n\nТренировка завершена за ${mins} мин.\nОбщий поднятый вес: ${log.totalWeightLifted} кг.\n\nПродолжайте в том же духе! 💪`);
+  }
+});
+
+// Cancel workout session
+document.getElementById('btn-cancel-workout').addEventListener('click', () => {
+  if (confirm('Сбросить текущую тренировку? Весь сегодняшний прогресс тренировки будет утерян.')) {
+    state.activeWorkout = null;
+    saveState();
+    stopWorkoutTimer();
+    stopRestTimer();
+    
+    workoutActiveTab = 'programs';
+    renderWorkoutsScreen();
+    showToast('Тренировка отменена');
+  }
+});
+
+// ================================================================
+// REST TIMER LOGIC
+// ================================================================
+
+function startRestTimer(seconds) {
+  if (restTimerInterval) {
+    clearInterval(restTimerInterval);
+  }
+
+  restTimerTotalSeconds = seconds;
+  restTimerSecondsLeft = seconds;
+
+  const widget = document.getElementById('rest-timer-widget');
+  widget.style.display = 'block';
+
+  updateRestTimerUI();
+
+  restTimerInterval = setInterval(() => {
+    restTimerSecondsLeft--;
+    if (restTimerSecondsLeft <= 0) {
+      clearInterval(restTimerInterval);
+      restTimerInterval = null;
+      
+      playRestTimerSound();
+      
+      // Vibrate if supported
+      if ('vibrate' in navigator) {
+        navigator.vibrate([200, 100, 200]);
+      }
+      
+      // Fade out widget
+      widget.style.display = 'none';
+      showToast('Время отдыха истекло! Пора делать подход 💪');
+    } else {
+      updateRestTimerUI();
+    }
+  }, 1000);
+}
+
+function updateRestTimerUI() {
+  const secondsText = document.getElementById('rest-timer-seconds');
+  const progressRing = document.getElementById('rest-timer-ring-progress');
+  
+  if (secondsText) {
+    secondsText.textContent = restTimerSecondsLeft + 'с';
+  }
+  
+  if (progressRing) {
+    const circumference = 150.8;
+    const fraction = restTimerSecondsLeft / restTimerTotalSeconds;
+    const offset = circumference * (1 - fraction);
+    progressRing.style.strokeDashoffset = offset;
+  }
+}
+
+function stopRestTimer() {
+  if (restTimerInterval) {
+    clearInterval(restTimerInterval);
+    restTimerInterval = null;
+  }
+  document.getElementById('rest-timer-widget').style.display = 'none';
+}
+
+document.getElementById('btn-rest-timer-plus').addEventListener('click', () => {
+  restTimerSecondsLeft += 30;
+  restTimerTotalSeconds += 30;
+  updateRestTimerUI();
+});
+
+document.getElementById('btn-rest-timer-skip').addEventListener('click', () => {
+  stopRestTimer();
+});
+
+// Web Audio API synthesised ding-dong bell sound
+function playRestTimerSound() {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // First chime (ding) - High pitch
+    const osc1 = audioCtx.createOscillator();
+    const gain1 = audioCtx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(880, audioCtx.currentTime); // Note A5
+    gain1.gain.setValueAtTime(0.12, audioCtx.currentTime);
+    gain1.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+    osc1.connect(gain1);
+    gain1.connect(audioCtx.destination);
+    osc1.start();
+    osc1.stop(audioCtx.currentTime + 0.4);
+
+    // Second chime (dong) - Lower pitch
+    const osc2 = audioCtx.createOscillator();
+    const gain2 = audioCtx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.15); // Note E5
+    gain2.gain.setValueAtTime(0.1, audioCtx.currentTime + 0.15);
+    gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.7);
+    osc2.connect(gain2);
+    gain2.connect(audioCtx.destination);
+    osc2.start(audioCtx.currentTime + 0.15);
+    osc2.stop(audioCtx.currentTime + 0.7);
+  } catch (err) {
+    console.error("Failed to synthesize audio chimes:", err);
+  }
+}
+
+// ================================================================
+// HISTORY AND ANALYTICS RENDERING
+// ================================================================
+
+function renderHistoryList() {
+  const container = document.getElementById('workout-history-list');
+  container.innerHTML = '';
+
+  // Calculate overall stats
+  let totalWorkouts = state.workoutLogs.length;
+  let totalWeight = 0;
+  let totalTimeSeconds = 0;
+
+  state.workoutLogs.forEach(log => {
+    totalWeight += log.totalWeightLifted || 0;
+    totalTimeSeconds += log.durationSeconds || 0;
+  });
+
+  const totalTimeHours = Math.floor(totalTimeSeconds / 3600);
+  const totalTimeMinutes = Math.round((totalTimeSeconds % 3600) / 60);
+
+  document.getElementById('stats-total-workouts').textContent = totalWorkouts;
+  document.getElementById('stats-total-weight').textContent = formatWeightStats(totalWeight);
+  document.getElementById('stats-total-time').textContent = `${totalTimeHours}ч ${totalTimeMinutes}м`;
+
+  if (totalWorkouts === 0) {
+    container.innerHTML = `
+      <div class="skincare-empty">
+        <div class="skincare-empty-icon">📅</div>
+        <div class="skincare-empty-title">История пуста</div>
+        <p class="skincare-empty-text">Здесь будут отображаться ваши выполненные тренировки с подробными отчетами.</p>
+      </div>
+    `;
+    return;
+  }
+
+  // Render logs in reverse chronological order
+  const sortedLogs = [...state.workoutLogs].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  sortedLogs.forEach(log => {
+    const card = document.createElement('div');
+    card.className = 'history-card';
+    card.dataset.id = log.id;
+
+    // Date formatting (readable Russian)
+    const options = { day: 'numeric', month: 'long', weekday: 'short' };
+    const dateStr = new Date(log.date).toLocaleDateString('ru-RU', options);
+    const durationMins = Math.round(log.durationSeconds / 60);
+
+    // Build exercises preview list
+    let exercisesHTML = '';
+    log.exercises.forEach(ex => {
+      const setsTags = ex.sets.map(s => `<span class="history-set-tag">${s.weight} x ${s.reps}</span>`).join('');
+      exercisesHTML += `
+        <div class="history-exercise-item">
+          <div class="history-exercise-name">${ex.name}</div>
+          <div class="history-sets-tags">${setsTags}</div>
+        </div>
+      `;
+    });
+
+    card.innerHTML = `
+      <div class="history-card-header">
+        <div class="history-card-header-left">
+          <span class="history-card-icon">${log.icon || '🏋️'}</span>
+          <div class="history-card-titles">
+            <span class="history-card-name">${log.workoutName}</span>
+            <span class="history-card-date">${dateStr} • ${durationMins} мин</span>
+          </div>
+        </div>
+        <div class="history-card-summary">
+          <span class="history-card-weight">${log.totalWeightLifted} кг</span>
+          <span>${log.exercises.length} упр.</span>
+        </div>
+      </div>
+      <div class="history-card-content" style="display: none;">
+        ${exercisesHTML}
+      </div>
+    `;
+
+    // Click to toggle accordion expand/collapse
+    const header = card.querySelector('.history-card-header');
+    const content = card.querySelector('.history-card-content');
+    
+    header.addEventListener('click', () => {
+      const visible = content.style.display !== 'none';
+      content.style.display = visible ? 'none' : 'block';
+      card.style.borderColor = visible ? 'var(--border-color)' : 'var(--accent-color)';
+    });
+
+    container.appendChild(card);
+  });
+}
+
+function formatWeightStats(weightKg) {
+  if (weightKg >= 1000) {
+    return (weightKg / 1000).toFixed(1) + ' т';
+  }
+  return weightKg + ' кг';
+}
+

@@ -84,7 +84,7 @@ def test_onboarding_and_basic_setup(server, driver):
     time.sleep(0.2)
     
     # Click Next Step (Step 2 -> Step 3)
-    next_btn = driver.find_element(By.XPATH, "//div[@data-step='2']//button[contains(text(), 'Продолжить')]")
+    next_btn = driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding div[data-step='2'] .btn-next-step")
     next_btn.click()
     time.sleep(0.2)
     
@@ -111,7 +111,7 @@ def test_supplement_scheduling_and_stock(server, driver):
     driver.execute_script("const cb = document.getElementById('onboarding-daily-tracking'); cb.checked = true; cb.dispatchEvent(new Event('change'));")
     time.sleep(0.1)
     
-    driver.find_element(By.XPATH, "//div[@data-step='2']//button[contains(text(), 'Продолжить')]").click()
+    driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding div[data-step='2'] .btn-next-step").click()
     time.sleep(0.1)
     driver.find_element(By.ID, "btn-onboarding-demo").click()
     time.sleep(0.5)
@@ -138,9 +138,9 @@ def test_supplement_scheduling_and_stock(server, driver):
     time.sleep(0.3)
     
     # Fill Supplement Form: Name, Dose, and Scheduling
-    # Let's add "Спирулина" with scheduling on Wednesday (today is Wednesday -> 3)
-    driver.find_element(By.ID, "item-name").send_keys("Спирулина")
-    driver.find_element(By.ID, "item-dose").send_keys("3 капсулы")
+    # Let's add "Spirulina" with scheduling on Wednesday (today is Wednesday -> 3)
+    driver.find_element(By.ID, "item-name").send_keys("Spirulina")
+    driver.find_element(By.ID, "item-dose").send_keys("3 caps")
     
     # Verify stock inputs exist in HTML
     assert driver.find_element(By.ID, "item-stock-total") is not None
@@ -165,12 +165,12 @@ def test_supplement_scheduling_and_stock(server, driver):
     driver.execute_script("arguments[0].click();", submit_btn)
     time.sleep(0.3)
     
-    # Let's add another supplement: "Аскорбинка", only on Monday (data-day="1") (not today!)
+    # Let's add another supplement: "Ascorbinka", only on Monday (data-day="1") (not today!)
     add_item_btn = driver.find_element(By.CSS_SELECTOR, "button.add-item-card-btn[data-block-id='block-utro']")
     driver.execute_script("arguments[0].click();", add_item_btn)
     time.sleep(0.3)
-    driver.find_element(By.ID, "item-name").send_keys("Аскорбинка")
-    driver.find_element(By.ID, "item-dose").send_keys("1 шт")
+    driver.find_element(By.ID, "item-name").send_keys("Ascorbinka")
+    driver.find_element(By.ID, "item-dose").send_keys("1 pc")
     driver.execute_script("arguments[0].click();", driver.find_element(By.ID, "item-schedule-days"))
     time.sleep(0.1)
     driver.execute_script("arguments[0].click();", driver.find_element(By.XPATH, "//div[@id='item-days-picker']/button[@data-day='1']"))
@@ -184,14 +184,14 @@ def test_supplement_scheduling_and_stock(server, driver):
     time.sleep(0.3)
     
     # In Normal Mode:
-    # "Спирулина" should be visible because it's scheduled for Wednesday (today)
-    spirulina_row = driver.find_element(By.XPATH, "//span[contains(text(), 'Спирулина')]/ancestor::div[contains(@class, 'row-item')]")
+    # "Spirulina" should be visible because it's scheduled for Wednesday (today)
+    spirulina_row = driver.find_element(By.XPATH, "//span[contains(text(), 'Spirulina')]/ancestor::div[contains(@class, 'row-item')]")
     assert spirulina_row.is_displayed()
     
-    # "Аскорбинка" should be HIDDEN because it's only scheduled for Monday
+    # "Ascorbinka" should be HIDDEN because it's only scheduled for Monday
     with pytest.raises(Exception):
-        # Should not find visible row for Аскорбинка
-        row = driver.find_element(By.XPATH, "//span[contains(text(), 'Аскорбинка')]/ancestor::div[contains(@class, 'row-item')]")
+        # Should not find visible row for Ascorbinka
+        row = driver.find_element(By.XPATH, "//span[contains(text(), 'Ascorbinka')]/ancestor::div[contains(@class, 'row-item')]")
         assert not row.is_displayed()
         
     # Check "Спирулина" checkbox to verify stock reduction
@@ -202,7 +202,7 @@ def test_supplement_scheduling_and_stock(server, driver):
     time.sleep(0.2)
     
     # Verify checkbox is checked - must re-find after renderApp() rebuilds DOM
-    spirulina_row = driver.find_element(By.XPATH, "//span[contains(text(), 'Спирулина')]/ancestor::div[contains(@class, 'row-item')]")
+    spirulina_row = driver.find_element(By.XPATH, "//span[contains(text(), 'Spirulina')]/ancestor::div[contains(@class, 'row-item')]")
     checkbox = spirulina_row.find_element(By.CLASS_NAME, "custom-checkbox")
     assert "checked" in checkbox.get_attribute("class")
     
@@ -211,8 +211,9 @@ def test_supplement_scheduling_and_stock(server, driver):
     driver.execute_script("arguments[0].click();", edit_toggle)
     time.sleep(0.2)
     
-    # The spirulina row should show warning badge since stock is now 8 (10 - 2 = 8, which is < 10)
-    badge = driver.find_element(By.XPATH, "//span[contains(text(), 'Спирулина')]/ancestor::div[contains(@class, 'row-item')]//span[contains(@class, 'badge-warning') or contains(text(), 'Осталось')]")
+    # Re-find spirulina_row because DOM was rebuilt
+    spirulina_row = driver.find_element(By.XPATH, "//span[contains(text(), 'Spirulina')]/ancestor::div[contains(@class, 'row-item')]")
+    badge = spirulina_row.find_element(By.CLASS_NAME, "stock-warning-badge")
     assert "8" in badge.text
     
     # Disable Edit Mode and uncheck it
@@ -221,7 +222,7 @@ def test_supplement_scheduling_and_stock(server, driver):
     time.sleep(0.2)
     
     # Re-find checkbox before unchecking
-    spirulina_row = driver.find_element(By.XPATH, "//span[contains(text(), 'Спирулина')]/ancestor::div[contains(@class, 'row-item')]")
+    spirulina_row = driver.find_element(By.XPATH, "//span[contains(text(), 'Spirulina')]/ancestor::div[contains(@class, 'row-item')]")
     checkbox = spirulina_row.find_element(By.CLASS_NAME, "custom-checkbox")
     driver.execute_script("arguments[0].click();", checkbox)
     time.sleep(0.2)
@@ -239,7 +240,7 @@ def test_skincare_expiry_badges(server, driver):
     wait.until(EC.presence_of_element_located((By.ID, "dialog-onboarding")))
     driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding .btn-next-step").click()
     time.sleep(0.1)
-    driver.find_element(By.XPATH, "//div[@data-step='2']//button[contains(text(), 'Продолжить')]").click()
+    driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding div[data-step='2'] .btn-next-step").click()
     time.sleep(0.1)
     driver.find_element(By.ID, "btn-onboarding-demo").click()
     time.sleep(0.5)
@@ -270,7 +271,7 @@ def test_skincare_expiry_badges(server, driver):
     time.sleep(0.3)
     
     # Add expired skincare: opened 2 months ago, PAO = 1 month
-    driver.find_element(By.ID, "skincare-name").send_keys("Просроченный крем")
+    driver.find_element(By.ID, "skincare-name").send_keys("Expired Cream")
     
     # Fill dates: opened 2026-04-03 (2 months before 2026-06-03), PAO = 1
     driver.execute_script("document.getElementById('skincare-opened-date').value = '2026-04-03';")
@@ -282,13 +283,13 @@ def test_skincare_expiry_badges(server, driver):
     time.sleep(0.3)
     
     # Verify expired badge is rendered
-    expired_badge = wait.until(EC.presence_of_element_located((By.XPATH, "//span[contains(text(), 'Просроченный крем')]/ancestor::div[contains(@class, 'skincare-card')]//span[contains(@class, 'expired') or contains(text(), 'Просрочено')]")))
+    expired_badge = wait.until(EC.presence_of_element_located((By.XPATH, "//span[contains(text(), 'Expired Cream')]/ancestor::div[contains(@class, 'skincare-card')]//span[contains(@class, 'expired')]")))
     assert expired_badge.is_displayed()
     
     # Click to add another skincare: expiring soon (expires in 10 days)
     driver.execute_script("arguments[0].click();", btn_add)
     time.sleep(0.3)
-    driver.find_element(By.ID, "skincare-name").send_keys("Скоро закончится")
+    driver.find_element(By.ID, "skincare-name").send_keys("Expires Soon")
     
     # Absolute EXP date set to 2026-06-13 (10 days from 2026-06-03)
     driver.execute_script("document.getElementById('skincare-exp-date').value = '2026-06-13';")
@@ -298,7 +299,7 @@ def test_skincare_expiry_badges(server, driver):
     time.sleep(0.3)
     
     # Verify expiring soon warning badge is rendered
-    warning_badge = wait.until(EC.presence_of_element_located((By.XPATH, "//span[contains(text(), 'Скоро закончится')]/ancestor::div[contains(@class, 'skincare-card')]//span[contains(@class, 'warning') or contains(text(), 'Истекает')]")))
+    warning_badge = wait.until(EC.presence_of_element_located((By.XPATH, "//span[contains(text(), 'Expires Soon')]/ancestor::div[contains(@class, 'skincare-card')]//span[contains(@class, 'warning')]")))
     assert warning_badge.is_displayed()
     assert "10" in warning_badge.text
 
@@ -310,7 +311,7 @@ def test_feature_toggles_default_disabled(server, driver):
     wait.until(EC.presence_of_element_located((By.ID, "dialog-onboarding")))
     driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding .btn-next-step").click()
     time.sleep(0.1)
-    driver.find_element(By.XPATH, "//div[@data-step='2']//button[contains(text(), 'Продолжить')]").click()
+    driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding div[data-step='2'] .btn-next-step").click()
     time.sleep(0.1)
     driver.find_element(By.ID, "btn-onboarding-clean").click()
     time.sleep(0.5)
@@ -329,7 +330,7 @@ def test_feature_toggles_default_disabled(server, driver):
     btn_first_block = driver.find_element(By.ID, "btn-create-first-block")
     driver.execute_script("arguments[0].click();", btn_first_block)
     time.sleep(0.2)
-    driver.find_element(By.ID, "block-name").send_keys("Утро")
+    driver.find_element(By.ID, "block-name").send_keys("Morning")
     btn_block_submit = driver.find_element(By.CSS_SELECTOR, "#form-block button[type='submit']")
     driver.execute_script("arguments[0].click();", btn_block_submit)
     time.sleep(0.3)
@@ -384,6 +385,7 @@ def test_feature_toggles_default_disabled(server, driver):
     driver.execute_script("arguments[0].click();", btn_skincare_cancel)
     time.sleep(0.2)
 
+
 def test_theme_toggle(server, driver):
     """Test dark/light theme toggle and persistence."""
     driver.get(f"http://127.0.0.1:{PORT}/")
@@ -393,7 +395,7 @@ def test_theme_toggle(server, driver):
     wait.until(EC.presence_of_element_located((By.ID, "dialog-onboarding")))
     driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding .btn-next-step").click()
     time.sleep(0.1)
-    driver.find_element(By.XPATH, "//div[@data-step='2']//button[contains(text(), 'Продолжить')]").click()
+    driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding div[data-step='2'] .btn-next-step").click()
     time.sleep(0.1)
     driver.find_element(By.ID, "btn-onboarding-clean").click()
     time.sleep(0.5)
@@ -426,7 +428,7 @@ def test_search_filter(server, driver):
     wait.until(EC.presence_of_element_located((By.ID, "dialog-onboarding")))
     driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding .btn-next-step").click()
     time.sleep(0.1)
-    driver.find_element(By.XPATH, "//div[@data-step='2']//button[contains(text(), 'Продолжить')]").click()
+    driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding div[data-step='2'] .btn-next-step").click()
     time.sleep(0.1)
     driver.find_element(By.ID, "btn-onboarding-demo").click()
     time.sleep(0.5)
@@ -464,7 +466,7 @@ def test_mark_all_button(server, driver):
     wait.until(EC.presence_of_element_located((By.ID, "dialog-onboarding")))
     driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding .btn-next-step").click()
     time.sleep(0.1)
-    driver.find_element(By.XPATH, "//div[@data-step='2']//button[contains(text(), 'Продолжить')]").click()
+    driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding div[data-step='2'] .btn-next-step").click()
     time.sleep(0.1)
     driver.find_element(By.ID, "btn-onboarding-demo").click()
     time.sleep(0.5)
@@ -504,7 +506,7 @@ def test_export_import_data(server, driver):
     wait.until(EC.presence_of_element_located((By.ID, "dialog-onboarding")))
     driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding .btn-next-step").click()
     time.sleep(0.1)
-    driver.find_element(By.XPATH, "//div[@data-step='2']//button[contains(text(), 'Продолжить')]").click()
+    driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding div[data-step='2'] .btn-next-step").click()
     time.sleep(0.1)
     driver.find_element(By.ID, "btn-onboarding-clean").click()
     time.sleep(0.5)
@@ -582,7 +584,7 @@ def test_reset_to_default(server, driver):
     wait.until(EC.presence_of_element_located((By.ID, "dialog-onboarding")))
     driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding .btn-next-step").click()
     time.sleep(0.1)
-    driver.find_element(By.XPATH, "//div[@data-step='2']//button[contains(text(), 'Продолжить')]").click()
+    driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding div[data-step='2'] .btn-next-step").click()
     time.sleep(0.1)
     driver.find_element(By.ID, "btn-onboarding-clean").click()
     time.sleep(0.5)
@@ -630,7 +632,7 @@ def test_skincare_schedule_types(server, driver):
     wait.until(EC.presence_of_element_located((By.ID, "dialog-onboarding")))
     driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding .btn-next-step").click()
     time.sleep(0.1)
-    driver.find_element(By.XPATH, "//div[@data-step='2']//button[contains(text(), 'Продолжить')]").click()
+    driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding div[data-step='2'] .btn-next-step").click()
     time.sleep(0.1)
     driver.find_element(By.ID, "btn-onboarding-clean").click()
     time.sleep(0.5)
@@ -685,7 +687,7 @@ def test_xss_protection(server, driver):
     wait.until(EC.presence_of_element_located((By.ID, "dialog-onboarding")))
     driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding .btn-next-step").click()
     time.sleep(0.1)
-    driver.find_element(By.XPATH, "//div[@data-step='2']//button[contains(text(), 'Продолжить')]").click()
+    driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding div[data-step='2'] .btn-next-step").click()
     time.sleep(0.1)
     driver.find_element(By.ID, "btn-onboarding-clean").click()
     time.sleep(0.5)
@@ -711,9 +713,6 @@ def test_xss_protection(server, driver):
     block_name = driver.find_element(By.XPATH, "//span[contains(text(), '<script>') or contains(text(), 'Тест')]")
     assert block_name.is_displayed()
 
-    # No alert should have appeared (if script executed, alert would show)
-    # This is implicit - if we reach here, test passed
-
 def test_form_validation(server, driver):
     """Test form validation - required fields, empty submissions."""
     driver.get(f"http://127.0.0.1:{PORT}/")
@@ -723,7 +722,7 @@ def test_form_validation(server, driver):
     wait.until(EC.presence_of_element_located((By.ID, "dialog-onboarding")))
     driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding .btn-next-step").click()
     time.sleep(0.1)
-    driver.find_element(By.XPATH, "//div[@data-step='2']//button[contains(text(), 'Продолжить')]").click()
+    driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding div[data-step='2'] .btn-next-step").click()
     time.sleep(0.1)
     driver.find_element(By.ID, "btn-onboarding-clean").click()
     time.sleep(0.5)
@@ -761,7 +760,7 @@ def test_delete_block_and_items(server, driver):
     wait.until(EC.presence_of_element_located((By.ID, "dialog-onboarding")))
     driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding .btn-next-step").click()
     time.sleep(0.1)
-    driver.find_element(By.XPATH, "//div[@data-step='2']//button[contains(text(), 'Продолжить')]").click()
+    driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding div[data-step='2'] .btn-next-step").click()
     time.sleep(0.1)
     driver.find_element(By.ID, "btn-onboarding-demo").click()
     time.sleep(0.5)
@@ -788,3 +787,169 @@ def test_delete_block_and_items(server, driver):
     # Block should be removed
     cards = driver.find_elements(By.CLASS_NAME, "card")
     assert len(cards) < 4  # Was 4 blocks in demo
+
+def test_workouts_tracker_flow(server, driver):
+    driver.get(f"http://127.0.0.1:{PORT}/")
+    wait = WebDriverWait(driver, 5)
+    
+    # Skip onboarding by choosing clean slate
+    wait.until(EC.presence_of_element_located((By.ID, "dialog-onboarding")))
+    driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding .btn-next-step").click()
+    time.sleep(0.1)
+    driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding div[data-step='2'] .btn-next-step").click()
+    time.sleep(0.1)
+    driver.find_element(By.ID, "btn-onboarding-clean").click()
+    time.sleep(0.5)
+
+    # 1. Enable workouts toggle in settings via JS
+    driver.execute_script("""
+        const cb = document.getElementById('setting-workouts-enabled');
+        cb.checked = true;
+        cb.dispatchEvent(new Event('change'));
+    """)
+    time.sleep(0.2)
+    
+    # Bottom nav workouts tab should be visible
+    nav_workouts = driver.find_element(By.ID, "nav-workouts")
+    assert nav_workouts.is_displayed()
+    
+    # 2. Navigate to Workouts tab
+    driver.execute_script("arguments[0].click();", nav_workouts)
+    time.sleep(0.3)
+    
+    # Empty state should be shown
+    empty_btn = wait.until(EC.presence_of_element_located((By.ID, "btn-create-first-workout")))
+    assert empty_btn.is_displayed()
+    
+    # 3. Click first workout creation button
+    driver.execute_script("arguments[0].click();", empty_btn)
+    time.sleep(0.3)
+    
+    # Fill workout day modal: "Day A"
+    driver.find_element(By.ID, "workout-name").send_keys("Day A")
+    driver.execute_script("document.getElementById('workout-icon').value = '🏋️';")
+    
+    submit_btn = driver.find_element(By.CSS_SELECTOR, "#form-workout button[type='submit']")
+    driver.execute_script("arguments[0].click();", submit_btn)
+    time.sleep(0.3)
+    
+    # Workout day card should be created and visible
+    card = driver.find_element(By.CLASS_NAME, "workout-card")
+    assert card.is_displayed()
+    assert "Day A".upper() in card.text.upper()
+    
+    # 4. Add exercise to workout
+    add_ex_btn = card.find_element(By.CLASS_NAME, "add-exercise-card-btn")
+    driver.execute_script("arguments[0].click();", add_ex_btn)
+    time.sleep(0.3)
+    
+    # Fill exercise form: "Squats", note: "to parallel"
+    driver.find_element(By.ID, "exercise-name").send_keys("Squats")
+    driver.find_element(By.ID, "exercise-notes").send_keys("to parallel")
+    
+    # Fill first set details: 60 kg, 10 reps (already has 1 row by default)
+    weight_input = driver.find_element(By.CSS_SELECTOR, "#exercise-sets-list .set-row-item:first-child .weight")
+    reps_input = driver.find_element(By.CSS_SELECTOR, "#exercise-sets-list .set-row-item:first-child .reps")
+    driver.execute_script("arguments[0].value = '60 kg';", weight_input)
+    driver.execute_script("arguments[0].value = '10';", reps_input)
+    
+    # Add second set
+    add_row_btn = driver.find_element(By.ID, "btn-add-set-row")
+    driver.execute_script("arguments[0].click();", add_row_btn)
+    time.sleep(0.1)
+    
+    # Fill second set details: 65 kg, 8 reps
+    weight_input2 = driver.find_element(By.CSS_SELECTOR, "#exercise-sets-list .set-row-item:nth-child(2) .weight")
+    reps_input2 = driver.find_element(By.CSS_SELECTOR, "#exercise-sets-list .set-row-item:nth-child(2) .reps")
+    driver.execute_script("arguments[0].value = '65 kg';", weight_input2)
+    driver.execute_script("arguments[0].value = '8';", reps_input2)
+    
+    # Submit exercise form
+    ex_submit = driver.find_element(By.CSS_SELECTOR, "#form-exercise button[type='submit']")
+    driver.execute_script("arguments[0].click();", ex_submit)
+    time.sleep(0.3)
+    
+    # Re-find card because it was rebuilt after list rendering
+    card = driver.find_element(By.CLASS_NAME, "workout-card")
+    assert "Squats".upper() in card.text.upper()
+    
+    # Disable edits mode
+    edit_toggle = driver.find_element(By.ID, "workouts-edit-toggle")
+    driver.execute_script("arguments[0].click();", edit_toggle)
+    time.sleep(0.3)
+    
+    # 5. Start workout session
+    # Re-find card and start button since DOM rebuilt after toggling edit mode
+    card = driver.find_element(By.CLASS_NAME, "workout-card")
+    start_btn = card.find_element(By.CLASS_NAME, "workout-start-btn")
+    driver.execute_script("arguments[0].click();", start_btn)
+    time.sleep(0.3)
+    
+    # Active workout screen should open, stopwatch running
+    active_view = driver.find_element(By.ID, "workout-active-view")
+    assert active_view.is_displayed()
+    
+    timer = driver.find_element(By.ID, "active-workout-timer")
+    assert timer.is_displayed()
+    
+    # 6. Check off the first set of Squats
+    set_row = driver.find_element(By.CSS_SELECTOR, ".active-set-row:first-child")
+    driver.execute_script("arguments[0].click();", set_row)
+    time.sleep(0.2)
+    
+    # Re-find set_row since checking off a set rerenders the active list
+    set_row = driver.find_element(By.CSS_SELECTOR, ".active-set-row:first-child")
+    assert "checked" in set_row.get_attribute("class")
+    
+    # Floating rest timer should appear
+    rest_timer = driver.find_element(By.ID, "rest-timer-widget")
+    assert rest_timer.is_displayed()
+    
+    # Skip rest timer
+    skip_btn = driver.find_element(By.ID, "btn-rest-timer-skip")
+    driver.execute_script("arguments[0].click();", skip_btn)
+    time.sleep(0.2)
+    assert not rest_timer.is_displayed()
+    
+    # 7. Check off the second set to complete the exercise
+    set_row2 = driver.find_element(By.CSS_SELECTOR, ".active-set-row:nth-child(2)")
+    driver.execute_script("arguments[0].click();", set_row2)
+    time.sleep(0.2)
+    
+    # Active progress should update
+    progress_text = driver.find_element(By.ID, "active-workout-progress-text")
+    assert "2" in progress_text.text
+    
+    # Dismiss rest timer again
+    driver.execute_script("arguments[0].click();", skip_btn)
+    time.sleep(0.2)
+    
+    # 8. Finish workout session
+    finish_btn = driver.find_element(By.ID, "btn-finish-workout")
+    driver.execute_script("arguments[0].click();", finish_btn)
+    time.sleep(0.2)
+    
+    # Confirm alert using Selenium
+    alert = driver.switch_to.alert
+    alert.accept()
+    time.sleep(0.2)
+    
+    # It should show celebration alert, accept it too
+    alert2 = driver.switch_to.alert
+    assert "1120" in alert2.text
+    alert2.accept()
+    time.sleep(0.3)
+    
+    # 9. Verify History log is updated
+    history_section = driver.find_element(By.ID, "workout-history-section")
+    assert history_section.is_displayed()
+    
+    stats_workouts = driver.find_element(By.ID, "stats-total-workouts")
+    assert stats_workouts.text == "1"
+    
+    stats_weight = driver.find_element(By.ID, "stats-total-weight")
+    assert "1.1" in stats_weight.text or "1120" in stats_weight.text
+    
+    history_card = driver.find_element(By.CLASS_NAME, "history-card")
+    assert history_card.is_displayed()
+    assert "Day A".upper() in history_card.text.upper()

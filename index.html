@@ -122,6 +122,91 @@
       </div>
     </div>
 
+    <!-- ===== SCREEN: WORKOUTS ===== -->
+    <div id="screen-workouts" class="screen">
+      <!-- State 1: Active Workout Mode -->
+      <div id="workout-active-view" style="display: none;">
+        <div class="active-workout-header">
+          <div class="active-workout-meta">
+            <h2 id="active-workout-title" class="workout-running-title">Тренировка</h2>
+            <div class="stopwatch-container">
+              <span class="stopwatch-pulse"></span>
+              <span id="active-workout-timer">00:00:00</span>
+            </div>
+          </div>
+          <div class="active-workout-progress-container">
+            <div class="progress-info">
+              <span class="progress-label">Выполнение подходов</span>
+              <span id="active-workout-progress-text" class="progress-stats">0 / 0 (0%)</span>
+            </div>
+            <div class="progress-bar-container">
+              <div id="active-workout-progress-fill" class="progress-bar-fill" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="active-workout-exercises-list">
+          <!-- Active exercises rendered dynamically here -->
+        </div>
+
+        <div class="active-workout-footer">
+          <button id="btn-cancel-workout" class="btn-action btn-danger">Отменить</button>
+          <button id="btn-finish-workout" class="btn-action btn-primary">Завершить тренировку</button>
+        </div>
+      </div>
+
+      <!-- State 2: Normal Mode (Programs / History) -->
+      <div id="workout-normal-view">
+        <div class="workout-tabs">
+          <button class="workout-tab-btn active" id="tab-workout-programs">Программы</button>
+          <button class="workout-tab-btn" id="tab-workout-history">История</button>
+        </div>
+
+        <!-- Section: Programs -->
+        <div id="workout-programs-section">
+          <div class="workouts-controls">
+            <button id="workouts-edit-toggle" class="btn-toggle-workouts-edit" title="Режим редактирования">
+              <span id="workouts-edit-btn-text">Настроить</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            </button>
+          </div>
+
+          <div id="workout-programs-list" class="grid">
+            <!-- Routines cards rendered dynamically here -->
+          </div>
+
+          <div id="add-workout-container" class="add-block-wrapper" style="display: none; margin-top: 16px;">
+            <button id="add-workout-btn" class="btn-add-block">
+              <span class="plus-icon">+</span> Добавить тренировочный день
+            </button>
+          </div>
+        </div>
+
+        <!-- Section: History -->
+        <div id="workout-history-section" style="display: none;">
+          <!-- Overall Stats Widgets -->
+          <div class="workout-stats-grid">
+            <div class="workout-stat-card">
+              <div class="workout-stat-value" id="stats-total-workouts">0</div>
+              <div class="workout-stat-label">Тренировок</div>
+            </div>
+            <div class="workout-stat-card">
+              <div class="workout-stat-value" id="stats-total-weight">0 кг</div>
+              <div class="workout-stat-label">Поднятый вес</div>
+            </div>
+            <div class="workout-stat-card">
+              <div class="workout-stat-value" id="stats-total-time">0ч 0м</div>
+              <div class="workout-stat-label">Время в зале</div>
+            </div>
+          </div>
+
+          <div id="workout-history-list">
+            <!-- Past workouts logs rendered dynamically here -->
+          </div>
+        </div>
+      </div>
+    </div>
+
   </main>
   
   <!-- Reset completion FAB when taken any items -->
@@ -138,6 +223,10 @@
     <button class="nav-tab" id="nav-skincare" aria-label="Уход">
       <span class="nav-emoji">✨</span>
       <span>Уход</span>
+    </button>
+    <button class="nav-tab" id="nav-workouts" aria-label="Зал">
+      <span class="nav-emoji">🏋️</span>
+      <span>Зал</span>
     </button>
   </nav>
   
@@ -363,6 +452,35 @@
         </div>
 
         <div class="setting-item border-top">
+          <div class="setting-info-row">
+            <div class="setting-info">
+              <div class="setting-title">Раздел «Тренировки»</div>
+              <div class="setting-description">Включить вкладку для планирования и проведения тренировок в тренажерном зале.</div>
+            </div>
+            <label class="switch-toggle" title="Включить тренировки">
+              <input type="checkbox" id="setting-workouts-enabled">
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="setting-item border-top" id="setting-workout-rest-group" style="display: none;">
+          <div class="setting-info-row">
+            <div class="setting-info">
+              <div class="setting-title">Время отдыха между подходами</div>
+              <div class="setting-description">Время отдыха по умолчанию в таймере отдыха.</div>
+            </div>
+            <select id="setting-workout-rest-time" class="setting-select" title="Время отдыха">
+              <option value="30">30 секунд</option>
+              <option value="60">60 секунд</option>
+              <option value="90" selected>90 секунд</option>
+              <option value="120">2 минуты</option>
+              <option value="180">3 минуты</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-item border-top">
           <div class="setting-info">
             <div class="setting-title">Импорт и экспорт данных</div>
             <div class="setting-description">Сделайте резервную копию вашего стека добавок или загрузите конфигурацию с другого устройства.</div>
@@ -568,6 +686,129 @@
 
   <!-- Notification Toast -->
   <div id="toast" class="toast-message" style="display: none;"></div>
+
+  <!-- DIALOG: Add/Edit Workout Day -->
+  <dialog id="dialog-workout" class="modal-sheet">
+    <form method="dialog" id="form-workout">
+      <div class="modal-header">
+        <h2 id="workout-dialog-title" class="modal-title">Новая тренировка</h2>
+        <button type="button" class="btn-close-modal" aria-label="Закрыть">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit-workout-id">
+        
+        <div class="form-group">
+          <label for="workout-name">Название тренировочного дня *</label>
+          <input type="text" id="workout-name" required placeholder="Например: День А: Upper, Кардио">
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="workout-icon">Иконка (Emoji)</label>
+            <input type="text" id="workout-icon" placeholder="🏋️" maxlength="4">
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Цветовая тема</label>
+          <div class="color-picker-grid">
+            <label class="color-option den" title="Синий">
+              <input type="radio" name="workout-color" value="den" checked>
+              <span class="color-preview"></span>
+            </label>
+            <label class="color-option utro" title="Янтарный">
+              <input type="radio" name="workout-color" value="utro">
+              <span class="color-preview"></span>
+            </label>
+            <label class="color-option eve" title="Фиолетовый">
+              <input type="radio" name="workout-color" value="eve">
+              <span class="color-preview"></span>
+            </label>
+            <label class="color-option noc" title="Аспидно-серый">
+              <input type="radio" name="workout-color" value="noc">
+              <span class="color-preview"></span>
+            </label>
+            <label class="color-option emerald" title="Изумрудный">
+              <input type="radio" name="workout-color" value="emerald">
+              <span class="color-preview"></span>
+            </label>
+            <label class="color-option rose" title="Розовый">
+              <input type="radio" name="workout-color" value="rose">
+              <span class="color-preview"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="btn-delete-workout" class="btn-action btn-danger" style="display: none;">Удалить программу</button>
+        <div class="footer-actions">
+          <button type="button" class="btn-action btn-secondary btn-cancel">Отмена</button>
+          <button type="submit" class="btn-action btn-primary">Сохранить</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- DIALOG: Add/Edit Exercise -->
+  <dialog id="dialog-exercise" class="modal-sheet">
+    <form method="dialog" id="form-exercise">
+      <div class="modal-header">
+        <h2 id="exercise-dialog-title" class="modal-title">Добавить упражнение</h2>
+        <button type="button" class="btn-close-modal" aria-label="Закрыть">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit-exercise-id">
+        <input type="hidden" id="exercise-workout-id">
+        
+        <div class="form-group">
+          <label for="exercise-name">Название упражнения *</label>
+          <input type="text" id="exercise-name" required placeholder="Например: Жим лежа, Приседания">
+        </div>
+        
+        <div class="form-group">
+          <label for="exercise-notes">Заметка / Инструкция</label>
+          <input type="text" id="exercise-notes" placeholder="Например: Лопатки сведены, хват широкий">
+        </div>
+
+        <div class="form-group border-top-dashed" style="margin-top: 16px; padding-top: 12px;">
+          <label class="section-subtitle" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span>Подходы</span>
+            <button type="button" id="btn-add-set-row" class="btn-text-action">+ Добавить подход</button>
+          </label>
+          <div id="exercise-sets-list" class="sets-editor-list">
+            <!-- Dynamic set rows inserted here -->
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="btn-delete-exercise" class="btn-action btn-danger" style="display: none;">Удалить</button>
+        <div class="footer-actions">
+          <button type="button" class="btn-action btn-secondary btn-cancel">Отмена</button>
+          <button type="submit" class="btn-action btn-primary">Сохранить</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Floating Rest Timer Widget -->
+  <div id="rest-timer-widget" class="rest-timer-container" style="display: none;">
+    <div class="rest-timer-inner">
+      <svg class="rest-timer-ring" width="56" height="56">
+        <circle class="rest-timer-ring-bg" cx="28" cy="28" r="24"></circle>
+        <circle id="rest-timer-ring-progress" class="rest-timer-ring-progress" cx="28" cy="28" r="24"></circle>
+      </svg>
+      <div id="rest-timer-seconds" class="rest-timer-value">90с</div>
+      <div class="rest-timer-info">
+        <span class="rest-timer-title">Отдых...</span>
+      </div>
+      <div class="rest-timer-actions">
+        <button type="button" id="btn-rest-timer-plus" class="btn-rest-action" aria-label="Плюс 30 секунд" title="+30с">+30с</button>
+        <button type="button" id="btn-rest-timer-skip" class="btn-rest-action skip" aria-label="Пропустить отдых" title="Пропустить">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4l10 8-10 8V4zM19 5v14"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Scripts -->
   <script type="module" src="js/app.js"></script>
