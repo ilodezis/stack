@@ -72,6 +72,12 @@
 * **Контроль сроков** — PAO (после открытия) и EXP (срок годности)
 * **Статусы**: `⚠️ Просрочено`, `⏳ Истекает через N дней`, `✓ Свежий`
 
+#### 🏋️ Тренировки и зал
+* **Конструктор программ** — создание тренировочных дней, планирование подходов (вес и повторения), изменение порядка упражнений перетаскиванием (SortableJS).
+* **Интерактивный плеер** — секундомер времени тренировки, отметка подходов галочками, прогресс-бар выполненной работы.
+* **Таймер отдыха** — всплывающий круговой таймер с возможностью продления на 30 секунд или пропуска, звуковым гонгом (Web Audio API) и вибрацией.
+* **История и статистика** — учет общего числа тренировок, времени и суммарно поднятого веса (тоннажа) с детальным логом прошлых занятий.
+
 #### ⚙️ Модульные настройки
 
 Всё выключено по умолчанию. Включайте только нужное:
@@ -83,6 +89,7 @@
 | **Расписание добавок** | Приём по конкретным дням недели |
 | **Учёт запасов** | Списание капсул и предупреждения |
 | **Сроки косметики** | Контроль PAO и EXP |
+| **Раздел тренировок** | Вкладка «Зал» для отслеживания тренировок |
 
 ---
 
@@ -164,6 +171,7 @@ python3 -m pytest tests/test_ritual.py::test_onboarding_and_basic_setup -v
 - Онбординг и создание первого блока
 - Расписание добавок и учёт запасов
 - Сроки годности косметики
+- Прохождение тренировки (старт, отметка подходов, таймер отдыха, финиш и история)
 - Feature flags (выключены по умолчанию)
 
 ---
@@ -245,6 +253,12 @@ No registration, no servers, no cloud — all data stays on your device in `loca
 * **Expiration control** — PAO (after opening) and EXP (expiry date)
 * **Status badges**: `⚠️ Expired`, `⏳ Expires in N days`, `✓ Fresh`
 
+#### 🏋️ Workouts & Gym
+* **Routine Builder** — create training days, plan sets (weight and reps), and rearrange exercises with drag-and-drop (SortableJS).
+* **Interactive Player** — active workout stopwatch, set completion checklists, and overall workout progress tracking.
+* **Smart Rest Timer** — pop-up circular timer with +30s/skip controls, synthesizer chime (Web Audio API), and vibration alert.
+* **History & Stats** — track total workouts, duration, and accumulated weight volume (tonnage) with detailed logs of past sessions.
+
 #### ⚙️ Modular Options
 
 Everything is OFF by default. Enable only what you need:
@@ -256,6 +270,7 @@ Everything is OFF by default. Enable only what you need:
 | **Supplement scheduling** | Specific days of week |
 | **Stock counter** | Pill tracking and low-stock warnings |
 | **Expiration dates** | PAO and EXP tracking |
+| **Workouts section** | Gym tracker tab, routines, history, and active player |
 
 ---
 
@@ -337,6 +352,7 @@ python3 -m pytest tests/test_ritual.py::test_onboarding_and_basic_setup -v
 - Onboarding and first block creation
 - Supplement scheduling and stock tracking
 - Skincare expiration dates
+- Workouts tracking flow (start, set checklists, rest timer, completion, and stats)
 - Feature flags (disabled by default)
 
 ---
