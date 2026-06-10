@@ -2243,6 +2243,10 @@ body.edit-mode-workouts .workout-start-btn {
   display: none;
 }
 
+body.edit-mode-workouts .add-exercise-card-btn {
+  display: flex;
+}
+
 /* Sets Editor list inside Dialog */
 .sets-editor-list {
   display: flex;

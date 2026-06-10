@@ -1,11 +1,11 @@
-const CACHE_NAME = 'ritual-v12';
+const CACHE_NAME = 'ritual-v13';
 const ASSETS = [
   './',
   './index.html',
-  './css/app.css',
-  './js/app.js',
-  './manifest.json?v=12',
-  './icon.png?v=12',
+  './css/app.css?v=13',
+  './js/app.js?v=13',
+  './manifest.json?v=13',
+  './icon.png?v=13',
   'https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/modular/sortable.esm.js'
 ];
 
