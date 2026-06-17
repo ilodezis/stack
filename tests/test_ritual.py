@@ -954,3 +954,106 @@ def test_workouts_tracker_flow(server, driver):
     history_card = driver.find_element(By.CLASS_NAME, "history-card")
     assert history_card.is_displayed()
     assert "Day A".upper() in history_card.text.upper()
+
+def test_workout_background_timer(server, driver):
+    driver.get(f"http://127.0.0.1:{PORT}/")
+    wait = WebDriverWait(driver, 5)
+    
+    # Skip onboarding by choosing clean slate
+    wait.until(EC.presence_of_element_located((By.ID, "dialog-onboarding")))
+    driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding .btn-next-step").click()
+    time.sleep(0.1)
+    driver.find_element(By.CSS_SELECTOR, "#dialog-onboarding div[data-step='2'] .btn-next-step").click()
+    time.sleep(0.1)
+    driver.find_element(By.ID, "btn-onboarding-clean").click()
+    time.sleep(0.5)
+
+    # 1. Enable workouts toggle in settings via JS
+    driver.execute_script("""
+        const cb = document.getElementById('setting-workouts-enabled');
+        cb.checked = true;
+        cb.dispatchEvent(new Event('change'));
+    """)
+    time.sleep(0.2)
+    
+    # 2. Navigate to Workouts tab
+    nav_workouts = driver.find_element(By.ID, "nav-workouts")
+    driver.execute_script("arguments[0].click();", nav_workouts)
+    time.sleep(0.3)
+    
+    # 3. Create a workout
+    empty_btn = wait.until(EC.presence_of_element_located((By.ID, "btn-create-first-workout")))
+    driver.execute_script("arguments[0].click();", empty_btn)
+    time.sleep(0.3)
+    driver.find_element(By.ID, "workout-name").send_keys("Day B")
+    driver.execute_script("document.getElementById('workout-icon').value = '🏋️';")
+    submit_btn = driver.find_element(By.CSS_SELECTOR, "#form-workout button[type='submit']")
+    driver.execute_script("arguments[0].click();", submit_btn)
+    time.sleep(0.3)
+    
+    # 4. Add exercise
+    card = driver.find_element(By.CLASS_NAME, "workout-card")
+    add_ex_btn = card.find_element(By.CLASS_NAME, "add-exercise-card-btn")
+    driver.execute_script("arguments[0].click();", add_ex_btn)
+    time.sleep(0.3)
+    driver.find_element(By.ID, "exercise-name").send_keys("Squats")
+    weight_input = driver.find_element(By.CSS_SELECTOR, "#exercise-sets-list .set-row-item:first-child .weight")
+    reps_input = driver.find_element(By.CSS_SELECTOR, "#exercise-sets-list .set-row-item:first-child .reps")
+    driver.execute_script("arguments[0].value = '60 kg';", weight_input)
+    driver.execute_script("arguments[0].value = '10';", reps_input)
+    ex_submit = driver.find_element(By.CSS_SELECTOR, "#form-exercise button[type='submit']")
+    driver.execute_script("arguments[0].click();", ex_submit)
+    time.sleep(0.3)
+    
+    # Disable edits mode
+    edit_toggle = driver.find_element(By.ID, "workouts-edit-toggle")
+    driver.execute_script("arguments[0].click();", edit_toggle)
+    time.sleep(0.3)
+    
+    # 5. Start workout session
+    card = driver.find_element(By.CLASS_NAME, "workout-card")
+    start_btn = card.find_element(By.CLASS_NAME, "workout-start-btn")
+    driver.execute_script("arguments[0].click();", start_btn)
+    time.sleep(0.3)
+    
+    # 6. Check off the first set of Squats to trigger rest timer
+    set_row = driver.find_element(By.CSS_SELECTOR, ".active-set-row:first-child")
+    driver.execute_script("arguments[0].click();", set_row)
+    time.sleep(0.2)
+    
+    # Rest timer should appear
+    rest_timer = driver.find_element(By.ID, "rest-timer-widget")
+    assert rest_timer.is_displayed()
+    
+    # 7. Modify restTimerEndTime via JS to be in the past, simulating background time expiration
+    driver.execute_script("window.state.restTimerEndTime = Date.now() - 5000; window.saveState();")
+    
+    # Trigger visibilitychange event simulating returning to the app
+    driver.execute_script("document.dispatchEvent(new Event('visibilitychange'));")
+    time.sleep(0.2)
+    
+    # The widget should be hidden now because it detected expiration
+    assert not rest_timer.is_displayed()
+    
+    # 8. Check off the first set again to start rest timer in the future
+    # Uncheck
+    set_row = driver.find_element(By.CSS_SELECTOR, ".active-set-row:first-child")
+    driver.execute_script("arguments[0].click();", set_row)
+    time.sleep(0.2)
+    # Check again (re-find to avoid stale element reference)
+    set_row = driver.find_element(By.CSS_SELECTOR, ".active-set-row:first-child")
+    driver.execute_script("arguments[0].click();", set_row)
+    time.sleep(0.2)
+    
+    assert rest_timer.is_displayed()
+    
+    # Set restTimerEndTime to 30 seconds in the future
+    driver.execute_script("window.state.restTimerEndTime = Date.now() + 30000; window.saveState();")
+    driver.execute_script("document.dispatchEvent(new Event('visibilitychange'));")
+    time.sleep(0.2)
+    
+    # Verify it remains visible and displays remaining time
+    assert rest_timer.is_displayed()
+    seconds_text = driver.find_element(By.ID, "rest-timer-seconds").text
+    assert "30" in seconds_text
+

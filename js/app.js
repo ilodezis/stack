@@ -20,6 +20,8 @@ let state = {
   workouts: [],
   workoutLogs: [],
   activeWorkout: null,
+  restTimerEndTime: null,
+  restTimerTotalSeconds: 0,
   lastCompletionDate: '',
   lastWeekNumber: 0,
   settings: {
@@ -51,6 +53,8 @@ const DEFAULT_STATE = {
   workouts: [],
   workoutLogs: [],
   activeWorkout: null,
+  restTimerEndTime: null,
+  restTimerTotalSeconds: 0,
   lastCompletionDate: '',
   lastWeekNumber: 0,
   settings: {
@@ -306,6 +310,12 @@ function loadState() {
       }
       if (state.lastWeekNumber === undefined) {
         state.lastWeekNumber = getCurrentWeekNumber();
+      }
+      if (state.restTimerEndTime === undefined) {
+        state.restTimerEndTime = null;
+      }
+      if (state.restTimerTotalSeconds === undefined) {
+        state.restTimerTotalSeconds = 0;
       }
       // Migrate items fields
       if (state.items) {
@@ -1385,6 +1395,7 @@ renderSkincareScreen();
 renderWorkoutsScreen();
 initBottomNav();
 resumeActiveWorkoutTimer();
+resumeRestTimer();
 
 // ================================================================
 // BOTTOM NAV
@@ -2599,24 +2610,41 @@ document.getElementById('btn-cancel-workout').addEventListener('click', () => {
 // REST TIMER LOGIC
 // ================================================================
 
-function startRestTimer(seconds) {
+function startRestTimer(seconds, totalSeconds = null) {
   if (restTimerInterval) {
     clearInterval(restTimerInterval);
   }
 
-  restTimerTotalSeconds = seconds;
+  restTimerTotalSeconds = totalSeconds !== null ? totalSeconds : seconds;
   restTimerSecondsLeft = seconds;
 
+  // Set absolute end time and persist
+  state.restTimerEndTime = Date.now() + seconds * 1000;
+  state.restTimerTotalSeconds = restTimerTotalSeconds;
+  saveState();
+
   const widget = document.getElementById('rest-timer-widget');
-  widget.style.display = 'block';
+  if (widget) {
+    widget.style.display = 'block';
+  }
 
   updateRestTimerUI();
 
   restTimerInterval = setInterval(() => {
-    restTimerSecondsLeft--;
+    if (!state.restTimerEndTime) {
+      stopRestTimer();
+      return;
+    }
+    const timeLeft = Math.ceil((state.restTimerEndTime - Date.now()) / 1000);
+    restTimerSecondsLeft = Math.max(0, timeLeft);
+    
     if (restTimerSecondsLeft <= 0) {
       clearInterval(restTimerInterval);
       restTimerInterval = null;
+      
+      state.restTimerEndTime = null;
+      state.restTimerTotalSeconds = 0;
+      saveState();
       
       playRestTimerSound();
       
@@ -2625,8 +2653,9 @@ function startRestTimer(seconds) {
         navigator.vibrate([200, 100, 200]);
       }
       
-      // Fade out widget
-      widget.style.display = 'none';
+      if (widget) {
+        widget.style.display = 'none';
+      }
       showToast('Время отдыха истекло! Пора делать подход 💪');
     } else {
       updateRestTimerUI();
@@ -2644,7 +2673,7 @@ function updateRestTimerUI() {
   
   if (progressRing) {
     const circumference = 150.8;
-    const fraction = restTimerSecondsLeft / restTimerTotalSeconds;
+    const fraction = restTimerTotalSeconds > 0 ? restTimerSecondsLeft / restTimerTotalSeconds : 0;
     const offset = circumference * (1 - fraction);
     progressRing.style.strokeDashoffset = offset;
   }
@@ -2655,18 +2684,75 @@ function stopRestTimer() {
     clearInterval(restTimerInterval);
     restTimerInterval = null;
   }
-  document.getElementById('rest-timer-widget').style.display = 'none';
+  state.restTimerEndTime = null;
+  state.restTimerTotalSeconds = 0;
+  saveState();
+  
+  const widget = document.getElementById('rest-timer-widget');
+  if (widget) {
+    widget.style.display = 'none';
+  }
+}
+
+function resumeRestTimer() {
+  if (state.restTimerEndTime) {
+    const timeLeft = Math.ceil((state.restTimerEndTime - Date.now()) / 1000);
+    if (timeLeft <= 0) {
+      // Expired while closed/inactive
+      stopRestTimer();
+      // Optionally trigger alarm/toast if it was recent (within 5 minutes)
+      const fiveMinutesAgo = -300;
+      if (timeLeft > fiveMinutesAgo) {
+        playRestTimerSound();
+        if ('vibrate' in navigator) {
+          navigator.vibrate([200, 100, 200]);
+        }
+        showToast('Время отдыха истекло! Пора делать подход 💪');
+      }
+    } else {
+      startRestTimer(timeLeft, state.restTimerTotalSeconds);
+    }
+  }
 }
 
 document.getElementById('btn-rest-timer-plus').addEventListener('click', () => {
-  restTimerSecondsLeft += 30;
-  restTimerTotalSeconds += 30;
-  updateRestTimerUI();
+  if (state.restTimerEndTime) {
+    state.restTimerEndTime += 30 * 1000;
+    state.restTimerTotalSeconds += 30;
+    saveState();
+    
+    const timeLeft = Math.ceil((state.restTimerEndTime - Date.now()) / 1000);
+    restTimerSecondsLeft = Math.max(0, timeLeft);
+    restTimerTotalSeconds = state.restTimerTotalSeconds;
+    updateRestTimerUI();
+  }
 });
 
 document.getElementById('btn-rest-timer-skip').addEventListener('click', () => {
   stopRestTimer();
 });
+
+// Event listener for tab/app focus restoration
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    // 1. Immediately refresh workout timer if active
+    if (state.activeWorkout) {
+      resumeActiveWorkoutTimer();
+    }
+    
+    // 2. Immediately refresh rest timer if active
+    if (state.restTimerEndTime) {
+      resumeRestTimer();
+    }
+  }
+});
+
+// Expose state and saveState to window for testing and debugging
+Object.defineProperty(window, 'state', {
+  get: () => state,
+  set: (val) => { state = val; }
+});
+window.saveState = saveState;
 
 // Web Audio API synthesised ding-dong bell sound
 function playRestTimerSound() {
